@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Simulador Moinho · Plano Price</title>
+<title>SIMURBA · Simulador URBA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
@@ -11,8 +11,8 @@
 <body>
 <header class="topo">
   <div>
-    <h1>Simulador Moinho</h1>
-    <p class="sub">Plano Price · material de treinamento da equipe de vendas</p>
+    <h1>SIMURBA</h1>
+    <p class="sub">Simulador URBA · <span id="dataTopo"></span></p>
   </div>
   <div class="acoes">
     <button id="btnCsv" class="btn sec">Baixar CSV</button>
@@ -78,21 +78,21 @@
 
   <!-- RESULTADOS -->
   <section class="resultados">
-    <div id="alerta" class="alerta"></div>
+    <div id="alerta" class="alerta nao-imprimir"></div>
     <div class="cards" id="cards"></div>
 
-    <div class="painel">
+    <div class="painel nao-imprimir">
       <h2>Regras comerciais</h2>
       <ul id="regras" class="regras"></ul>
       <div id="avisos"></div>
     </div>
 
-    <div class="painel">
+    <div class="painel nao-imprimir">
       <h2>Memória de cálculo</h2>
       <table class="memoria" id="memoria"></table>
     </div>
 
-    <div class="painel">
+    <div class="painel nao-imprimir">
       <div class="cab-tabela">
         <h2>Fluxo do cliente</h2>
         <label class="toggle"><input type="checkbox" id="mostrarDetalhe" /> mostrar principal/juros e valor corrigido</label>
@@ -102,8 +102,12 @@
       </div>
     </div>
 
+    <div class="painel so-imprimir">
+      <h2>Plano de pagamentos</h2>
+      <table class="fluxo" id="tabelaPdf"></table>
+    </div>
+
     <p class="aviso-legal">*Valores das parcelas são meramente ilustrativos. Não representam nem vinculam ao contrato.
-      Este simulador faz parte do material de treinamento da equipe de vendas e não tem validade como proposta oficial.
       Todas as propostas deverão ser inseridas no sistema CRM e aprovadas pela Coordenação de Vendas da Urba através do próprio sistema.</p>
   </section>
 </main>

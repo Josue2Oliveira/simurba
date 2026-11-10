@@ -1,4 +1,4 @@
-# Simulador Moinho — Plano Price
+# SIMURBA — Simulador URBA
 
 Site estático (HTML + CSS + JavaScript, sem servidor e sem build).
 Todos os cálculos rodam no navegador, então nada é enviado para servidor nenhum.

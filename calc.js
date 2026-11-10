@@ -42,8 +42,7 @@ export const DEFAULTS = {
 export function taxaPolitica(prazo) {
   if (prazo <= 36) return 0;
   if (prazo <= 48) return 0.006;
-  if (prazo <= 144) return 0.0085;
-  if (prazo <= 180) return 0.0089;
+  if (prazo <= 180) return 0.0089; // política atualizada: 0,89% de 49 a 180 meses
   return null;
 }
 

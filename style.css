@@ -65,7 +65,15 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 .fluxo tr.int td { background: var(--int); }
 .aviso-legal { font-size: 11px; color: var(--muted); line-height: 1.5; }
 
+.so-imprimir { display: none; }
+.fluxo tr.totalgeral td { font-weight: 700; border-top: 2px solid var(--ink); }
+.fluxo tr.totalgeral td:last-child { text-align: right; }
+
 @media print {
+  .nao-imprimir { display: none !important; }
+  .so-imprimir { display: block; }
+  .fluxo th, .fluxo td { padding: 3px 6px; }
+  .fluxo th { position: static; }
   body { background: #fff; font-size: 11px; }
   .entradas, .acoes, .toggle { display: none; }
   .grade { display: block; padding: 0; }
@@ -73,4 +81,8 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .rolagem { max-height: none; overflow: visible; }
   .painel { break-inside: avoid-page; }
   .card:first-child { color: var(--ink); background: #fff; }
+  .card:first-child span, .card:first-child small { color: var(--muted); }
+  .painel.so-imprimir { break-inside: auto; }
+  .fluxo thead { display: table-header-group; }
+  .fluxo tr { break-inside: avoid; }
 }

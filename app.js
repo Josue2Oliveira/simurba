@@ -52,7 +52,7 @@ function render() {
   ultimo = s;
   const r = s.resumo;
 
-  $("alerta").className = "alerta " + (s.tudoOk ? "ok" : "erro");
+  $("alerta").className = "alerta nao-imprimir " + (s.tudoOk ? "ok" : "erro");
   $("alerta").textContent = s.tudoOk ? "Simulação dentro das regras comerciais."
     : "ATENÇÃO: há regras não atendidas — confira abaixo.";
 
@@ -95,6 +95,17 @@ function render() {
   }
   h += "</tbody>";
   $("fluxo").innerHTML = h;
+
+  // Tabela do PDF: só valores a pagar (sem principal/juros)
+  $("dataTopo").textContent = "Simulação de " + fmtData(new Date((p.dataSimulacao || hoje()) + "T12:00:00"));
+  let t = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${temInterm ? "<th>Intermediária</th>" : ""}<th>Total do mês</th></tr></thead><tbody>`;
+  for (const l of s.linhas) {
+    const tipo = l.numero === 1 ? "Sinal" : l.tipo === "E" ? "Entrada" : "Mensal";
+    t += `<tr class="${l.intermTaxa ? "int" : ""}"><td>${l.numero}</td><td>${tipo}</td><td>${fmtData(l.venc)}</td><td>${brl(l.parcela)}</td>` +
+      (temInterm ? `<td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") + `<td>${brl(l.total)}</td></tr>`;
+  }
+  t += `<tr class="totalgeral"><td colspan="${temInterm ? 5 : 4}">Total a pagar</td><td>${brl(r.somaTotal)}</td></tr></tbody>`;
+  $("tabelaPdf").innerHTML = t;
 }
 
 // ---------- ações ----------
@@ -106,7 +117,7 @@ function baixarCsv() {
   const csv = "﻿" + linhas.map((x) => x.join(";")).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  a.download = `simulacao_moinho_${hoje()}.csv`;
+  a.download = `simulacao_simurba_${hoje()}.csv`;
   a.click();
 }
 
