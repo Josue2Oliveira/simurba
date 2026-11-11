@@ -18,12 +18,16 @@ export function addMonths(date, m) {
 
 const ym = (d) => `${d.getMonth() + 1}/${d.getFullYear()}`;
 
+export const EMPREENDIMENTOS = {
+  moinho: { nome: "Recanto do Moinho", jurosZeroAte: 48 },
+  botanique: { nome: "Botanique Residence", jurosZeroAte: 60 },
+};
+
 export const DEFAULTS = {
+  empreendimento: "moinho",
   valorTabela: 217000,
   valorProposta: 217000,
   entradaPct: 0.08,
-  comissaoPct: 0,
-  qtdComissao: 1,
   sinal: 5000,
   entradaGrupos: [{ qtd: 12, valor: 1030 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
   prazo: 144,
@@ -38,11 +42,13 @@ export const DEFAULTS = {
   dataSimulacao: "",               // "AAAA-MM-DD"; vazio = hoje
 };
 
-// Política de juros (planilha H39)
-export function taxaPolitica(prazo) {
-  if (prazo <= 36) return 0;
-  if (prazo <= 48) return 0.006;
-  if (prazo <= 180) return 0.0089; // política atualizada: 0,89% de 49 a 180 meses
+// Política de juros por empreendimento
+// Juros zero até 48x (Moinho) ou 60x (Botanique); depois 0,89% até 144x e 0,92% até 180x (ambos)
+export function taxaPolitica(prazo, empreendimento = "moinho") {
+  const emp = EMPREENDIMENTOS[empreendimento] || EMPREENDIMENTOS.moinho;
+  if (prazo <= emp.jurosZeroAte) return 0;
+  if (prazo <= 144) return 0.0089;
+  if (prazo <= 180) return 0.0092;
   return null;
 }
 
@@ -50,8 +56,8 @@ export function simular(inp) {
   const p = { ...DEFAULTS, ...inp };
   const r = p.taxa;
 
-  const valorVenda = p.valorProposta * (1 - p.comissaoPct);            // H5
-  const entradaPctLiq = p.entradaPct - p.comissaoPct;                   // H7
+  const valorVenda = p.valorProposta;                                   // H5
+  const entradaPctLiq = p.entradaPct;                                   // H7
   const entradaTotalEsperada = entradaPctLiq * p.valorTabela;           // H8
   const grupos = p.entradaGrupos.filter((g) => g.qtd > 0);
   const nEntrada = grupos.reduce((s, g) => s + g.qtd, 0);               // B12
@@ -146,10 +152,11 @@ export function simular(inp) {
   add("Ato mínimo de 1%", p.sinal / p.valorTabela >= 0.01,
     `O sinal (ato) precisa ser de pelo menos ${brl(p.valorTabela * 0.01)}.`);
   add("Entrada mínima de 8%", p.entradaPct >= 0.08, "A entrada precisa ser de no mínimo 8%.");
-  const tp = taxaPolitica(p.prazo);
+  const emp = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
+  const tp = taxaPolitica(p.prazo, p.empreendimento);
   add("Taxa de juros dentro da política", tp !== null && Math.abs(p.taxa - tp) < 1e-9,
     tp === null ? "Prazo acima de 180 meses não é permitido."
-      : `Para ${p.prazo} meses a taxa da política é ${(tp * 100).toFixed(2).replace(".", ",")}% a.m.`);
+      : `No ${emp.nome}, para ${p.prazo} meses a taxa da política é ${(tp * 100).toFixed(2).replace(".", ",")}% a.m.`);
 
   const entradaInformada = p.sinal + totalEntradaExSinal;
   const avisos = [];
@@ -158,14 +165,13 @@ export function simular(inp) {
 
   return {
     params: p,
+    empreendimento: emp,
     resumo: {
       valorVenda, entradaTotalEsperada, entradaInformada,
       entradaEfetivaPct: entradaInformada / valorVenda,
       nEntrada, totalEntradaExSinal, totalInterm, intermPct: totalInterm / valorVenda,
       financiamento, jurosPeriodoEntrada, baseCalculoPrice: financiamento * fatorEntrada,
       parcelaMensal, pmtPrincipal, pmtJuros, prazoTotal,
-      comissao: p.comissaoPct * p.valorTabela,
-      comissaoParcela: p.qtdComissao > 0 ? (p.comissaoPct * p.valorTabela) / p.qtdComissao : 0,
       somaCorrigida, somaTotal,
     },
     linhas, regras, avisos,

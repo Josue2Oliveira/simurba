@@ -1,4 +1,4 @@
-import { simular, DEFAULTS, taxaPolitica, brl, pct } from "./calc.js";
+import { simular, DEFAULTS, EMPREENDIMENTOS, taxaPolitica, brl, pct } from "./calc.js";
 
 const form = document.getElementById("form");
 const $ = (id) => document.getElementById(id);
@@ -20,6 +20,7 @@ function preencher(p) {
   for (const el of form.elements) {
     if (!el.name || !(el.name in p)) continue;
     const v = p[el.name];
+    if (el.type === "radio") { el.checked = el.value === v; continue; }
     el.value = el.dataset.pct !== undefined ? +(v * 100).toFixed(4) : v;
   }
   if (!p.dataSimulacao) form.dataSimulacao.value = hoje();
@@ -30,6 +31,7 @@ function ler() {
   const p = {};
   for (const el of form.elements) {
     if (!el.name) continue;
+    if (el.type === "radio") { if (el.checked) p[el.name] = el.value; continue; }
     if (el.type === "date" || el.tagName === "SELECT" && el.name === "intermPeriodicidade") p[el.name] = el.value;
     else {
       const n = parseFloat(el.value) || 0;
@@ -58,7 +60,7 @@ function render() {
 
   const card = (t, v, extra = "") => `<div class="card"><span>${t}</span><strong>${v}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
   $("cards").innerHTML =
-    card("Parcela mensal", brl(r.parcelaMensal), `${p.prazo}× após a entrada`) +
+    card("Parcela mensal", brl(r.parcelaMensal) + ' <span class="ipca">+ IPCA</span>', `${p.prazo}× após a entrada`) +
     card("Valor da venda (CRM)", brl(r.valorVenda)) +
     card("Entrada total", brl(r.entradaInformada), `${pct(r.entradaEfetivaPct)} · sinal + ${r.nEntrada} parcelas`) +
     card("Valor financiado", brl(r.financiamento)) +
@@ -80,7 +82,6 @@ function render() {
     ["Parcela: juros do período da entrada", r.pmtJuros],
     ["(=) Parcela mensal", r.parcelaMensal, "forte"],
   ];
-  if (r.comissao > 0) m.push(["Comissão apartada (total)", r.comissao], [`Comissão por parcela (${p.qtdComissao}×)`, r.comissaoParcela]);
   $("memoria").innerHTML = m.map(([t, v, c]) => `<tr class="${c || ""}"><td>${t}</td><td>${brl(v)}</td></tr>`).join("");
 
   const det = $("mostrarDetalhe").checked;
@@ -97,14 +98,23 @@ function render() {
   $("fluxo").innerHTML = h;
 
   // Tabela do PDF: só valores a pagar (sem principal/juros)
+  $("nomeEmp").textContent = s.empreendimento.nome;
+  const lim = s.empreendimento.jurosZeroAte;
+  const semJuros = p.taxa === 0;
+  $("faixaJuros").className = "faixa-juros" + (semJuros ? " ativa" : "");
+  $("faixaJuros").innerHTML = semJuros
+    ? `<strong>JUROS ZERO</strong> Esta simulação em ${p.prazo}x não tem juros. ${s.empreendimento.nome}: financiamento sem juros em até ${lim}x.`
+    : `<strong>JUROS ZERO EM ATÉ ${lim}x</strong> No ${s.empreendimento.nome}, o financiamento em até ${lim}x não tem juros.`;
+  $("dicaJuros").textContent = `Juros zero até ${s.empreendimento.jurosZeroAte}x · 0,89% a.m. até 144x · 0,92% a.m. até 180x`;
   $("dataTopo").textContent = "Simulação de " + fmtData(new Date((p.dataSimulacao || hoje()) + "T12:00:00"));
   let t = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${temInterm ? "<th>Intermediária</th>" : ""}<th>Total do mês</th></tr></thead><tbody>`;
   for (const l of s.linhas) {
     const tipo = l.numero === 1 ? "Sinal" : l.tipo === "E" ? "Entrada" : "Mensal";
-    t += `<tr class="${l.intermTaxa ? "int" : ""}"><td>${l.numero}</td><td>${tipo}</td><td>${fmtData(l.venc)}</td><td>${brl(l.parcela)}</td>` +
-      (temInterm ? `<td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") + `<td>${brl(l.total)}</td></tr>`;
+    const ipca = l.tipo === "M" ? ' <span class="ipca">+ IPCA</span>' : "";
+    t += `<tr class="${l.intermTaxa ? "int" : ""}"><td>${l.numero}</td><td>${tipo}</td><td>${fmtData(l.venc)}</td><td>${brl(l.parcela)}${ipca}</td>` +
+      (temInterm ? `<td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") + `<td>${brl(l.total)}${ipca}</td></tr>`;
   }
-  t += `<tr class="totalgeral"><td colspan="${temInterm ? 5 : 4}">Total a pagar</td><td>${brl(r.somaTotal)}</td></tr></tbody>`;
+  t += `<tr class="totalgeral"><td colspan="${temInterm ? 5 : 4}">Total a pagar (sem IPCA)</td><td>${brl(r.somaTotal)}</td></tr></tbody>`;
   $("tabelaPdf").innerHTML = t;
 }
 
@@ -117,19 +127,25 @@ function baixarCsv() {
   const csv = "﻿" + linhas.map((x) => x.join(";")).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  a.download = `simulacao_simurba_${hoje()}.csv`;
+  a.download = `simulacao_${ultimo.params.empreendimento}_${hoje()}.csv`;
   a.click();
 }
 
-form.addEventListener("input", render);
+// Ao trocar empreendimento ou prazo, aplica a taxa da política automaticamente
+function aplicarTaxa() {
+  const emp = form.querySelector('[name="empreendimento"]:checked')?.value;
+  const t = taxaPolitica(parseInt(form.prazo.value) || 0, emp);
+  if (t !== null) form.taxa.value = +(t * 100).toFixed(4);
+}
+form.addEventListener("input", (e) => {
+  if (e.target.name === "empreendimento" || e.target.name === "prazo") aplicarTaxa();
+  render();
+});
 $("mostrarDetalhe").addEventListener("change", render);
 $("btnCsv").onclick = baixarCsv;
 $("btnPrint").onclick = () => window.print();
 $("btnReset").onclick = () => { preencher({ ...DEFAULTS, dataSimulacao: hoje() }); render(); };
-$("btnTaxa").onclick = () => {
-  const t = taxaPolitica(parseInt(form.prazo.value) || 0);
-  if (t !== null) { form.taxa.value = +(t * 100).toFixed(4); render(); }
-};
+$("btnTaxa").onclick = () => { aplicarTaxa(); render(); };
 
 let inicial = { ...DEFAULTS };
 try { const salvo = JSON.parse(localStorage.getItem(STORAGE)); if (salvo) inicial = { ...inicial, ...salvo }; } catch {}

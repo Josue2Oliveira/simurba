@@ -12,7 +12,7 @@
 <header class="topo">
   <div>
     <h1>SIMURBA</h1>
-    <p class="sub">Simulador URBA · <span id="dataTopo"></span></p>
+    <p class="sub">Simulador URBA · <strong id="nomeEmp"></strong> · <span id="dataTopo"></span></p>
   </div>
   <div class="acoes">
     <button id="btnCsv" class="btn sec">Baixar CSV</button>
@@ -25,15 +25,20 @@
   <!-- ENTRADAS -->
   <form id="form" class="painel entradas" autocomplete="off">
     <fieldset>
+      <legend>Empreendimento</legend>
+      <div class="emp">
+        <label class="emp-op"><input type="radio" name="empreendimento" value="moinho" /> Recanto do Moinho</label>
+        <label class="emp-op"><input type="radio" name="empreendimento" value="botanique" /> Botanique Residence</label>
+      </div>
+      <p class="dica" id="dicaJuros"></p>
+    </fieldset>
+
+    <fieldset>
       <legend>Venda</legend>
       <label>Data da simulação <input type="date" name="dataSimulacao" /></label>
       <label>Valor de tabela (R$) <input type="number" step="0.01" name="valorTabela" /></label>
       <label>Valor proposta / cashback (R$) <input type="number" step="0.01" name="valorProposta" /></label>
-      <div class="dupla">
-        <label>Entrada (%) <input type="number" step="0.01" name="entradaPct" data-pct /></label>
-        <label>Comissão apartada (%) <input type="number" step="0.01" name="comissaoPct" data-pct /></label>
-      </div>
-      <label>Qtd. parcelas da comissão <input type="number" min="1" name="qtdComissao" /></label>
+      <label>Entrada (%) <input type="number" step="0.01" name="entradaPct" data-pct /></label>
     </fieldset>
 
     <fieldset>
@@ -78,6 +83,7 @@
 
   <!-- RESULTADOS -->
   <section class="resultados">
+    <div id="faixaJuros" class="faixa-juros"></div>
     <div id="alerta" class="alerta nao-imprimir"></div>
     <div class="cards" id="cards"></div>
 
@@ -105,6 +111,7 @@
     <div class="painel so-imprimir">
       <h2>Plano de pagamentos</h2>
       <table class="fluxo" id="tabelaPdf"></table>
+      <p class="nota-ipca">As parcelas do financiamento (mensais) são corrigidas mensalmente pelo IPCA. O total acima não inclui essa correção.</p>
     </div>
 
     <p class="aviso-legal">*Valores das parcelas são meramente ilustrativos. Não representam nem vinculam ao contrato.
