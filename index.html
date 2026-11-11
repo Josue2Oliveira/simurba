@@ -36,8 +36,9 @@
     <fieldset>
       <legend>Venda</legend>
       <label>Data da simulação <input type="date" name="dataSimulacao" /></label>
+      <label>Valor da proposta (R$) <input type="number" step="0.01" name="valorProposta" /></label>
       <label>Valor de tabela (R$) <input type="number" step="0.01" name="valorTabela" /></label>
-      <label>Valor proposta / cashback (R$) <input type="number" step="0.01" name="valorProposta" /></label>
+      <p class="dica">O cálculo usa só o valor da proposta. A tabela serve apenas para mostrar o desconto ao cliente.</p>
       <label>Entrada (%) <input type="number" step="0.01" name="entradaPct" data-pct /></label>
     </fieldset>
 
@@ -83,6 +84,9 @@
 
   <!-- RESULTADOS -->
   <section class="resultados">
+    <div class="ilustrativo"><strong>SIMULAÇÃO ILUSTRATIVA</strong>
+      Os valores desta simulação são apenas uma estimativa e não constituem proposta, oferta ou compromisso.
+      As condições válidas são exclusivamente as que constarem no contrato assinado.</div>
     <div id="faixaJuros" class="faixa-juros"></div>
     <div id="alerta" class="alerta nao-imprimir"></div>
     <div class="cards" id="cards"></div>
@@ -114,8 +118,10 @@
       <p class="nota-ipca">As parcelas do financiamento (mensais) são corrigidas mensalmente pelo IPCA. O total acima não inclui essa correção.</p>
     </div>
 
-    <p class="aviso-legal">*Valores das parcelas são meramente ilustrativos. Não representam nem vinculam ao contrato.
-      Todas as propostas deverão ser inseridas no sistema CRM e aprovadas pela Coordenação de Vendas da Urba através do próprio sistema.</p>
+    <p class="aviso-legal"><strong>Importante:</strong> esta simulação tem caráter meramente ilustrativo. Valor do lote, desconto, entrada,
+      parcelas, intermediárias, datas e taxas podem sofrer alterações e não vinculam as partes. Prevalecem sempre as condições
+      estabelecidas no contrato de compra e venda. As parcelas do financiamento são corrigidas pelo IPCA conforme contrato.
+      Todas as propostas deverão ser inseridas no sistema CRM e aprovadas pela Coordenação de Vendas da Urba.</p>
   </section>
 </main>
 

@@ -58,7 +58,7 @@ export function simular(inp) {
 
   const valorVenda = p.valorProposta;                                   // H5
   const entradaPctLiq = p.entradaPct;                                   // H7
-  const entradaTotalEsperada = entradaPctLiq * p.valorTabela;           // H8
+  const entradaTotalEsperada = entradaPctLiq * valorVenda;              // % sobre a proposta
   const grupos = p.entradaGrupos.filter((g) => g.qtd > 0);
   const nEntrada = grupos.reduce((s, g) => s + g.qtd, 0);               // B12
   const totalEntradaExSinal = grupos.reduce((s, g) => s + g.qtd * g.valor, 0); // B11
@@ -149,8 +149,8 @@ export function simular(inp) {
     add("Intermediárias vencem dia 10 ou 26", dia === 10 || dia === 26,
       "O vencimento das intermediárias deve ser dia 10 ou 26.");
   }
-  add("Ato mínimo de 1%", p.sinal / p.valorTabela >= 0.01,
-    `O sinal (ato) precisa ser de pelo menos ${brl(p.valorTabela * 0.01)}.`);
+  add("Ato mínimo de 1%", p.sinal / valorVenda >= 0.01,
+    `O sinal (ato) precisa ser de pelo menos ${brl(valorVenda * 0.01)}.`);
   add("Entrada mínima de 8%", p.entradaPct >= 0.08, "A entrada precisa ser de no mínimo 8%.");
   const emp = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
   const tp = taxaPolitica(p.prazo, p.empreendimento);
@@ -161,13 +161,16 @@ export function simular(inp) {
   const entradaInformada = p.sinal + totalEntradaExSinal;
   const avisos = [];
   if (Math.abs(entradaInformada - entradaTotalEsperada) > 1)
-    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a tabela é ${brl(entradaTotalEsperada)}.`);
+    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a proposta é ${brl(entradaTotalEsperada)}.`);
 
   return {
     params: p,
     empreendimento: emp,
     resumo: {
       valorVenda, entradaTotalEsperada, entradaInformada,
+      valorTabela: p.valorTabela,
+      desconto: Math.max(0, p.valorTabela - valorVenda),
+      descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - valorVenda) / p.valorTabela : 0,
       entradaEfetivaPct: entradaInformada / valorVenda,
       nEntrada, totalEntradaExSinal, totalInterm, intermPct: totalInterm / valorVenda,
       financiamento, jurosPeriodoEntrada, baseCalculoPrice: financiamento * fatorEntrada,

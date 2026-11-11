@@ -61,7 +61,9 @@ function render() {
   const card = (t, v, extra = "") => `<div class="card"><span>${t}</span><strong>${v}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
   $("cards").innerHTML =
     card("Parcela mensal", brl(r.parcelaMensal) + ' <span class="ipca">+ IPCA</span>', `${p.prazo}× após a entrada`) +
-    card("Valor da venda (CRM)", brl(r.valorVenda)) +
+    (r.desconto > 0
+      ? `<div class="card desconto"><span>Valor da proposta</span><strong>${brl(r.valorVenda)}</strong><small><s>Tabela ${brl(r.valorTabela)}</s><br><b>Desconto de ${brl(r.desconto)} (${pct(r.descontoPct)})</b></small></div>`
+      : card("Valor da proposta", brl(r.valorVenda))) +
     card("Entrada total", brl(r.entradaInformada), `${pct(r.entradaEfetivaPct)} · sinal + ${r.nEntrada} parcelas`) +
     card("Valor financiado", brl(r.financiamento)) +
     card("Intermediárias", brl(r.totalInterm), pct(r.intermPct)) +

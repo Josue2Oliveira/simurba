@@ -68,9 +68,15 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 .fluxo th:nth-child(-n+3), .fluxo td:nth-child(-n+3) { text-align: left; }
 .fluxo tr.ent td { background: #fafbf8; color: var(--muted); }
 .fluxo tr.int td { background: var(--int); }
-.aviso-legal { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.aviso-legal { font-size: 12px; border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); line-height: 1.5; }
 
 .so-imprimir { display: none; }
+.ilustrativo { padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; border: 2px solid var(--ink); background: #fff;
+  font-size: 13px; line-height: 1.5; }
+.ilustrativo strong { display: block; font-size: 14px; letter-spacing: .04em; margin-bottom: 2px; }
+.card.desconto small { display: block; font-size: 13px; margin-top: 4px; line-height: 1.4; }
+.card.desconto small b { color: var(--verde); }
+.card.desconto s { color: var(--muted); }
 .faixa-juros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-radius: 12px; margin-bottom: 16px;
   background: #fff6dd; border: 1px solid #f0d98a; color: #6b5200; font-size: 14px; }
 .faixa-juros strong { background: #e8b100; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 13px; letter-spacing: .03em; }
@@ -98,6 +104,7 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .card:first-child span, .card:first-child small { color: var(--muted); }
   .card:first-child .ipca { color: var(--verde); }
   .faixa-juros { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .aviso-legal, .ilustrativo { break-inside: avoid; }
   .painel.so-imprimir { break-inside: auto; }
   .fluxo thead { display: table-header-group; }
   .fluxo tr { break-inside: avoid; }
