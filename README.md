@@ -29,7 +29,12 @@ vercel --prod # publica em produção
 ```
 
 ## Onde mudar regras
-Em `calc.js`:
-- `taxaPolitica()` — faixas de prazo × taxa.
-- `DEFAULTS` — valores iniciais do formulário (lote, sinal, entrada etc.).
-- bloco "Regras" dentro de `simular()` — limites de 30%, 6×, ato 1%, entrada 8%, dias 10/26.
+Tudo em `calc.js`:
+- `EMPREENDIMENTOS` — regras de cada produto: juros zero até (48x Moinho / 60x Botanique), entrada mínima (10%),
+  ato mínimo (1% Moinho / 2,5% Botanique), limite de intermediárias (30% / 40%) e limite de quantidade (só Botanique: 6 ou 4).
+- `IDADE_MAXIMA` — idade máxima do cliente na última parcela (80 anos, ambos).
+- `taxaPolitica()` — 0,89% a.m. até 144x e 0,92% a.m. até 180x (ambos).
+- `DEFAULTS` — valores iniciais do formulário.
+
+Se alguma regra não for atendida, a simulação continua funcionando e o PDF sai marcado como
+"PROPOSTA FORA DA POLÍTICA", listando os itens fora da política.

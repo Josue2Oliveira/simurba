@@ -56,16 +56,23 @@ function render() {
 
   $("alerta").className = "alerta nao-imprimir " + (s.tudoOk ? "ok" : "erro");
   $("alerta").textContent = s.tudoOk ? "Simulação dentro das regras comerciais."
-    : "ATENÇÃO: há regras não atendidas — confira abaixo.";
+    : "ATENÇÃO: há regras não atendidas — o PDF sairá como PROPOSTA FORA DA POLÍTICA.";
+  const falhas = s.regras.filter((x) => !x.ok);
+  $("foraPolitica").className = "fora-politica" + (falhas.length ? " ativo" : "");
+  $("foraPolitica").innerHTML = falhas.length
+    ? `<strong>PROPOSTA FORA DA POLÍTICA</strong>Sujeita à análise e aprovação da Coordenação de Vendas. Itens fora da política:<ul>${falhas.map((x) => `<li>${x.nome}</li>`).join("")}</ul>` : "";
 
   const card = (t, v, extra = "") => `<div class="card"><span>${t}</span><strong>${v}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
   $("cards").innerHTML =
     card("Parcela mensal", brl(r.parcelaMensal) + ' <span class="ipca">+ IPCA</span>', `${p.prazo}× após a entrada`) +
     (r.desconto > 0
-      ? `<div class="card desconto"><span>Valor da proposta</span><strong>${brl(r.valorVenda)}</strong><small><s>Tabela ${brl(r.valorTabela)}</s><br><b>Desconto de ${brl(r.desconto)} (${pct(r.descontoPct)})</b></small></div>`
-      : card("Valor da proposta", brl(r.valorVenda))) +
-    card("Entrada total", brl(r.entradaInformada), `${pct(r.entradaEfetivaPct)} · sinal + ${r.nEntrada} parcelas`) +
+      ? `<div class="card desconto"><span>Valor da proposta</span><strong>${brl(r.valorProposta)}</strong><small><s>Tabela ${brl(r.valorTabela)}</s><br><b>Desconto de ${brl(r.desconto)} (${pct(r.descontoPct)})</b></small></div>`
+      : card("Valor da proposta", brl(r.valorProposta))) +
+    (r.comissao > 0
+      ? card("Entrada total", brl(r.entradaInformada + r.comissao), `${pct((r.entradaInformada + r.comissao) / r.valorProposta)} · inclui comissão de ${brl(r.comissao)}`)
+      : card("Entrada total", brl(r.entradaInformada), `${pct(r.entradaEfetivaPct)} · sinal + ${r.nEntrada} parcelas`)) +
     card("Valor financiado", brl(r.financiamento)) +
+    (r.comissao > 0 ? card("Comissão apartada", brl(r.comissao), `${r.qtdComissao}× de ${brl(r.comissaoParcela)}`) : "") +
     card("Intermediárias", brl(r.totalInterm), pct(r.intermPct)) +
     card("Pagamentos", `${r.prazoTotal + 1}`, `último em ${s.linhas.at(-1).venc.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}`);
 
@@ -74,7 +81,8 @@ function render() {
   $("avisos").innerHTML = s.avisos.map((a) => `<p class="aviso">⚠ ${a}</p>`).join("");
 
   const m = [
-    ["Valor de venda", r.valorVenda],
+    ...(r.comissao > 0 ? [["Valor da proposta", r.valorProposta], ["(−) Comissão apartada", -r.comissao]] : []),
+    ["(=) Valor de venda (CRM)", r.valorVenda, r.comissao > 0 ? "forte" : ""],
     ["(−) Total de entrada (sinal + parcelas)", -r.entradaInformada],
     ["(−) Intermediárias", -r.totalInterm],
     ["(=) Valor financiado", r.financiamento, "forte"],
@@ -84,16 +92,21 @@ function render() {
     ["Parcela: juros do período da entrada", r.pmtJuros],
     ["(=) Parcela mensal", r.parcelaMensal, "forte"],
   ];
+  if (r.comissao > 0) m.push([`Comissão apartada: ${r.qtdComissao}× de`, r.comissaoParcela, "forte"]);
+  $("dicaComissao").textContent = r.comissao > 0
+    ? `Comissão de ${brl(r.comissao)} em ${r.qtdComissao}× de ${brl(r.comissaoParcela)}, somada às primeiras ${r.qtdComissao} parcelas.` : "";
   $("memoria").innerHTML = m.map(([t, v, c]) => `<tr class="${c || ""}"><td>${t}</td><td>${brl(v)}</td></tr>`).join("");
 
   const det = $("mostrarDetalhe").checked;
   const temInterm = r.totalInterm > 0;
-  let h = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${det ? "<th>Principal</th><th>Juros</th><th>Corrigida (est.)</th>" : ""}${temInterm ? "<th>Intermediária</th><th>Interm. + taxa</th>" : ""}<th>Total</th></tr></thead><tbody>`;
+  const temCom = r.comissao > 0;
+  let h = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${det ? "<th>Principal</th><th>Juros</th><th>Corrigida (est.)</th>" : ""}${temInterm ? "<th>Intermediária</th><th>Interm. + taxa</th>" : ""}${temCom ? "<th>Comissão</th>" : ""}<th>Total</th></tr></thead><tbody>`;
   for (const l of s.linhas) {
     const tipo = l.numero === 1 ? "Sinal" : l.tipo === "E" ? "Entrada" : "Mensal";
     h += `<tr class="${l.tipo === "E" ? "ent" : ""}${l.intermCRM ? " int" : ""}"><td>${l.numero}</td><td>${tipo}</td><td>${fmtData(l.venc)}</td><td>${brl(l.parcela)}</td>` +
       (det ? `<td>${brl(l.principal)}</td><td>${brl(l.juros)}</td><td>${brl(l.corrigida)}</td>` : "") +
       (temInterm ? `<td>${l.intermCRM ? brl(l.intermCRM) : ""}</td><td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") +
+      (temCom ? `<td>${l.comissaoMes ? brl(l.comissaoMes) : ""}</td>` : "") +
       `<td>${brl(l.total)}</td></tr>`;
   }
   h += "</tbody>";
@@ -107,25 +120,29 @@ function render() {
   $("faixaJuros").innerHTML = semJuros
     ? `<strong>JUROS ZERO</strong> Esta simulação em ${p.prazo}x não tem juros. ${s.empreendimento.nome}: financiamento sem juros em até ${lim}x.`
     : `<strong>JUROS ZERO EM ATÉ ${lim}x</strong> No ${s.empreendimento.nome}, o financiamento em até ${lim}x não tem juros.`;
-  $("dicaJuros").textContent = `Juros zero até ${s.empreendimento.jurosZeroAte}x · 0,89% a.m. até 144x · 0,92% a.m. até 180x`;
+  const e = s.empreendimento, fp = (x) => (Math.round(x * 1000) / 10).toString().replace(".", ",") + "%";
+  $("dicaJuros").textContent = `Juros zero até ${e.jurosZeroAte}x · 0,89% a.m. até 144x · 0,92% a.m. até 180x. ` +
+    `Entrada mín. ${fp(e.entradaMin)} · ato mín. ${fp(e.atoMin)} · intermediárias até ${fp(e.intermMaxPct)}` +
+    (e.limiteQtdInterm ? " (máx. 6 no plano longo, 4 no curto)" : "") + ".";
   $("dataTopo").textContent = "Simulação de " + fmtData(new Date((p.dataSimulacao || hoje()) + "T12:00:00"));
-  let t = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${temInterm ? "<th>Intermediária</th>" : ""}<th>Total do mês</th></tr></thead><tbody>`;
+  let t = `<thead><tr><th>Nº</th><th>Tipo</th><th>Vencimento</th><th>Parcela</th>${temInterm ? "<th>Intermediária</th>" : ""}${temCom ? "<th>Comissão</th>" : ""}<th>Total do mês</th></tr></thead><tbody>`;
   for (const l of s.linhas) {
     const tipo = l.numero === 1 ? "Sinal" : l.tipo === "E" ? "Entrada" : "Mensal";
     const ipca = l.tipo === "M" ? ' <span class="ipca">+ IPCA</span>' : "";
     t += `<tr class="${l.intermTaxa ? "int" : ""}"><td>${l.numero}</td><td>${tipo}</td><td>${fmtData(l.venc)}</td><td>${brl(l.parcela)}${ipca}</td>` +
-      (temInterm ? `<td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") + `<td>${brl(l.total)}${ipca}</td></tr>`;
+      (temInterm ? `<td>${l.intermTaxa ? brl(l.intermTaxa) : ""}</td>` : "") +
+      (temCom ? `<td>${l.comissaoMes ? brl(l.comissaoMes) : ""}</td>` : "") + `<td>${brl(l.total)}${ipca}</td></tr>`;
   }
-  t += `<tr class="totalgeral"><td colspan="${temInterm ? 5 : 4}">Total a pagar (sem IPCA)</td><td>${brl(r.somaTotal)}</td></tr></tbody>`;
+  t += `<tr class="totalgeral"><td colspan="${4 + (temInterm ? 1 : 0) + (temCom ? 1 : 0)}">Total a pagar (sem IPCA)</td><td>${brl(r.somaTotal)}</td></tr></tbody>`;
   $("tabelaPdf").innerHTML = t;
 }
 
 // ---------- ações ----------
 function baixarCsv() {
   const num = (v) => v.toFixed(2).replace(".", ",");
-  const linhas = [["Parcela", "Tipo", "Vencimento", "Parcela mensal", "Principal", "Juros", "Valor corrigido (est.)", "Intermediária", "Intermediária + taxa", "Total"]];
+  const linhas = [["Parcela", "Tipo", "Vencimento", "Parcela mensal", "Principal", "Juros", "Valor corrigido (est.)", "Intermediária", "Intermediária + taxa", "Comissão", "Total"]];
   for (const l of ultimo.linhas)
-    linhas.push([l.numero, l.tipo, fmtData(l.venc), num(l.parcela), num(l.principal), num(l.juros), num(l.corrigida), num(l.intermCRM), num(l.intermTaxa), num(l.total)]);
+    linhas.push([l.numero, l.tipo, fmtData(l.venc), num(l.parcela), num(l.principal), num(l.juros), num(l.corrigida), num(l.intermCRM), num(l.intermTaxa), num(l.comissaoMes), num(l.total)]);
   const csv = "﻿" + linhas.map((x) => x.join(";")).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

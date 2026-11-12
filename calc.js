@@ -18,18 +18,29 @@ export function addMonths(date, m) {
 
 const ym = (d) => `${d.getMonth() + 1}/${d.getFullYear()}`;
 
+// Regras comerciais por empreendimento
 export const EMPREENDIMENTOS = {
-  moinho: { nome: "Recanto do Moinho", jurosZeroAte: 48 },
-  botanique: { nome: "Botanique Residence", jurosZeroAte: 60 },
+  moinho: {
+    nome: "Recanto do Moinho", jurosZeroAte: 48,
+    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false,
+  },
+  botanique: {
+    nome: "Botanique Residence", jurosZeroAte: 60,
+    entradaMin: 0.10, atoMin: 0.025, intermMaxPct: 0.40, limiteQtdInterm: true, // 6 (prazo ≥ 72x) ou 4 (< 72x)
+  },
 };
+export const IDADE_MAXIMA = 80; // idade do cliente na última parcela (ambos)
 
 export const DEFAULTS = {
   empreendimento: "moinho",
   valorTabela: 217000,
   valorProposta: 217000,
-  entradaPct: 0.08,
-  sinal: 5000,
-  entradaGrupos: [{ qtd: 12, valor: 1030 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
+  entradaPct: 0.10,
+  comissaoPct: 0,
+  qtdComissao: 1,
+  sinal: 5500,
+  entradaGrupos: [{ qtd: 12, valor: 1350 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
+  dataNascimento: "",              // "AAAA-MM-DD"
   prazo: 144,
   taxa: 0.0089,
   diaVenc: 25,
@@ -56,9 +67,13 @@ export function simular(inp) {
   const p = { ...DEFAULTS, ...inp };
   const r = p.taxa;
 
-  const valorVenda = p.valorProposta;                                   // H5
-  const entradaPctLiq = p.entradaPct;                                   // H7
-  const entradaTotalEsperada = entradaPctLiq * valorVenda;              // % sobre a proposta
+  // Comissão apartada: sai da entrada e é paga à parte, em qtdComissao parcelas
+  const comissao = p.comissaoPct * p.valorProposta;                     // K9 (sobre a proposta)
+  const qtdComissao = Math.max(1, Math.round(p.qtdComissao || 1));
+  const comissaoParcela = comissao / qtdComissao;                       // BK9
+  const valorVenda = p.valorProposta - comissao;                        // H5 (venda CRM)
+  const entradaPctLiq = p.entradaPct - p.comissaoPct;                   // H7
+  const entradaTotalEsperada = entradaPctLiq * p.valorProposta;         // % sobre a proposta
   const grupos = p.entradaGrupos.filter((g) => g.qtd > 0);
   const nEntrada = grupos.reduce((s, g) => s + g.qtd, 0);               // B12
   const totalEntradaExSinal = grupos.reduce((s, g) => s + g.qtd * g.valor, 0); // B11
@@ -130,16 +145,24 @@ export function simular(inp) {
     const intermCRM = interm.get(ym(venc)) || 0;
     if (intermCRM > 0) { if (tipo === "E") intermNaEntrada = true; else intermContadas++; }
     const intermTaxa = tipo === "M" ? Math.pow(1 + p.intermTaxa, numero) * intermCRM : 0;
-    const total = parcela + intermTaxa;
+    const comissaoMes = comissao > 0 && numero <= qtdComissao ? comissaoParcela : 0;
+    const total = parcela + intermTaxa + comissaoMes;
     somaCorrigida += corrigida; somaTotal += total;
-    linhas.push({ numero, tipo, venc, parcela, principal, juros, corrigida, intermCRM, intermTaxa, total });
+    linhas.push({ numero, tipo, venc, parcela, principal, juros, corrigida, intermCRM, intermTaxa, comissaoMes, total });
   }
 
   // Regras (planilha H34:H39 + regras da coluna CB)
+  const emp = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
   const regras = [];
   const add = (nome, ok, msg) => regras.push({ nome, ok, msg });
-  add("Intermediárias até 30% do valor da venda", totalInterm / valorVenda <= 0.30,
-    "A soma das intermediárias ultrapassa 30% do valor do lote. Reduza a quantidade ou o valor.");
+  const pc = (x) => { const v = Math.round(x * 1000) / 10; return (Number.isInteger(v) ? v : v.toFixed(1).replace(".", ",")) + "%"; };
+  add(`Intermediárias até ${pc(emp.intermMaxPct)} do valor da venda`, totalInterm / valorVenda <= emp.intermMaxPct + 1e-9,
+    `A soma das intermediárias (${pct(totalInterm / valorVenda)}) ultrapassa ${pc(emp.intermMaxPct)} do valor da venda. Reduza a quantidade ou o valor.`);
+  if (emp.limiteQtdInterm && p.intermQtd > 0) {
+    const max = p.prazo >= 72 ? 6 : 4;
+    add(`No máximo ${max} intermediárias (${p.prazo >= 72 ? "plano longo, 72x ou mais" : "plano curto, menos de 72x"})`, p.intermQtd <= max,
+      `Com ${p.prazo} meses de financiamento são permitidas no máximo ${max} intermediárias.`);
+  }
   if (p.intermQtd > 0) {
     add("Intermediárias dentro do período das mensais", !intermNaEntrada && intermContadas >= p.intermQtd,
       "Todas as intermediárias devem vencer entre a primeira e a última parcela mensal do financiamento.");
@@ -149,10 +172,24 @@ export function simular(inp) {
     add("Intermediárias vencem dia 10 ou 26", dia === 10 || dia === 26,
       "O vencimento das intermediárias deve ser dia 10 ou 26.");
   }
-  add("Ato mínimo de 1%", p.sinal / valorVenda >= 0.01,
-    `O sinal (ato) precisa ser de pelo menos ${brl(valorVenda * 0.01)}.`);
-  add("Entrada mínima de 8%", p.entradaPct >= 0.08, "A entrada precisa ser de no mínimo 8%.");
-  const emp = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
+  add(`Ato mínimo de ${pc(emp.atoMin)}`, p.sinal / p.valorProposta >= emp.atoMin - 0.0001,
+    `O sinal (ato) está em ${pct(p.sinal / p.valorProposta)}; o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
+  // entrada real = sinal + parcelas de entrada + comissão apartada
+  const entradaReal = p.sinal + totalEntradaExSinal + comissao;
+  add(`Entrada mínima de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,
+    `Sinal + parcelas de entrada${comissao > 0 ? " + comissão" : ""} somam ${brl(entradaReal)} (${pct(entradaReal / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.entradaMin)}.`);
+  // idade do cliente na última parcela
+  const ultimaParcela = linhas[linhas.length - 1].venc;
+  if (p.dataNascimento) {
+    const nasc = new Date(p.dataNascimento + "T12:00:00");
+    const limite = new Date(nasc); limite.setFullYear(nasc.getFullYear() + IDADE_MAXIMA);
+    let idadeFim = ultimaParcela.getFullYear() - nasc.getFullYear();
+    if (ultimaParcela < new Date(ultimaParcela.getFullYear(), nasc.getMonth(), nasc.getDate())) idadeFim--;
+    add(`Cliente com até ${IDADE_MAXIMA} anos no fim do financiamento`, ultimaParcela < limite,
+      `Na última parcela (${ultimaParcela.toLocaleDateString("pt-BR")}) o cliente terá ${idadeFim} anos.`);
+  } else {
+    add(`Cliente com até ${IDADE_MAXIMA} anos no fim do financiamento`, false, "Informe a data de nascimento do cliente.");
+  }
   const tp = taxaPolitica(p.prazo, p.empreendimento);
   add("Taxa de juros dentro da política", tp !== null && Math.abs(p.taxa - tp) < 1e-9,
     tp === null ? "Prazo acima de 180 meses não é permitido."
@@ -161,7 +198,7 @@ export function simular(inp) {
   const entradaInformada = p.sinal + totalEntradaExSinal;
   const avisos = [];
   if (Math.abs(entradaInformada - entradaTotalEsperada) > 1)
-    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a proposta é ${brl(entradaTotalEsperada)}.`);
+    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a proposta (já descontada a comissão) é ${brl(entradaTotalEsperada)}.`);
 
   return {
     params: p,
@@ -169,9 +206,11 @@ export function simular(inp) {
     resumo: {
       valorVenda, entradaTotalEsperada, entradaInformada,
       valorTabela: p.valorTabela,
-      desconto: Math.max(0, p.valorTabela - valorVenda),
-      descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - valorVenda) / p.valorTabela : 0,
-      entradaEfetivaPct: entradaInformada / valorVenda,
+      valorProposta: p.valorProposta,
+      comissao, qtdComissao, comissaoParcela,
+      desconto: Math.max(0, p.valorTabela - p.valorProposta),
+      descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - p.valorProposta) / p.valorTabela : 0,
+      entradaEfetivaPct: entradaInformada / p.valorProposta,
       nEntrada, totalEntradaExSinal, totalInterm, intermPct: totalInterm / valorVenda,
       financiamento, jurosPeriodoEntrada, baseCalculoPrice: financiamento * fatorEntrada,
       parcelaMensal, pmtPrincipal, pmtJuros, prazoTotal,

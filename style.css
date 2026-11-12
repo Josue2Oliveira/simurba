@@ -71,6 +71,11 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 .aviso-legal { font-size: 12px; border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); line-height: 1.5; }
 
 .so-imprimir { display: none; }
+.fora-politica { display: none; }
+.fora-politica.ativo { display: block; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; background: var(--erro-claro);
+  border: 2px solid var(--erro); color: var(--erro); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.fora-politica strong { display: block; font-size: 16px; letter-spacing: .04em; }
+.fora-politica ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .ilustrativo { padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; border: 2px solid var(--ink); background: #fff;
   font-size: 13px; line-height: 1.5; }
 .ilustrativo strong { display: block; font-size: 14px; letter-spacing: .04em; margin-bottom: 2px; }

@@ -36,10 +36,16 @@
     <fieldset>
       <legend>Venda</legend>
       <label>Data da simulação <input type="date" name="dataSimulacao" /></label>
+      <label>Data de nascimento do cliente <input type="date" name="dataNascimento" /></label>
       <label>Valor da proposta (R$) <input type="number" step="0.01" name="valorProposta" /></label>
       <label>Valor de tabela (R$) <input type="number" step="0.01" name="valorTabela" /></label>
       <p class="dica">O cálculo usa só o valor da proposta. A tabela serve apenas para mostrar o desconto ao cliente.</p>
       <label>Entrada (%) <input type="number" step="0.01" name="entradaPct" data-pct /></label>
+      <div class="dupla">
+        <label>Comissão apartada (%) <input type="number" step="0.01" name="comissaoPct" data-pct /></label>
+        <label>Qtd. parcelas da comissão <input type="number" min="1" name="qtdComissao" /></label>
+      </div>
+      <p class="dica" id="dicaComissao"></p>
     </fieldset>
 
     <fieldset>
@@ -87,6 +93,7 @@
     <div class="ilustrativo"><strong>SIMULAÇÃO ILUSTRATIVA</strong>
       Os valores desta simulação são apenas uma estimativa e não constituem proposta, oferta ou compromisso.
       As condições válidas são exclusivamente as que constarem no contrato assinado.</div>
+    <div id="foraPolitica" class="fora-politica"></div>
     <div id="faixaJuros" class="faixa-juros"></div>
     <div id="alerta" class="alerta nao-imprimir"></div>
     <div class="cards" id="cards"></div>
