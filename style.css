@@ -122,7 +122,11 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .cab-meta { text-align: left; flex-direction: row; gap: 24px; }
 }
 
+/* Sem margens na página: o navegador não imprime data, título, endereço e nº de página */
+@page { size: A4; margin: 0; }
+
 @media print {
+  body { padding: 12mm 12mm 10mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .nao-imprimir { display: none !important; }
   .so-imprimir { display: block; }
   .fluxo th, .fluxo td { padding: 3px 6px; }
