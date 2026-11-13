@@ -126,6 +126,23 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 @page { size: A4; margin: 0; }
 
 @media print {
+  .fluxo.pdf { width: 100%; table-layout: auto; font-size: 9.5px; }
+  .fluxo.pdf th { font-size: 9px; white-space: normal; padding: 4px 4px; }
+  .fluxo.pdf td { padding: 3px 4px; white-space: nowrap; }
+  .fluxo.pdf td small { font-size: 8.5px; }
+  .fluxo.pdf .ipca { font-size: 7.5px; }
+  .fluxo.pdf tr.totalgeral td:first-child { white-space: normal; }
+  .cab { padding: 12px 18px !important; margin-bottom: 10px !important; }
+  .cab-titulo { font-size: 22px !important; }
+  .chip { padding: 3px 10px; } .chip b { font-size: 14px; }
+  .cab-chips { margin-top: 8px; }
+  .faixa-juros { padding: 7px 12px; margin-bottom: 10px; font-size: 12px; }
+  .fora-politica.ativo { padding: 8px 12px; margin-bottom: 10px; }
+  .cards { margin-bottom: 10px; }
+  .painel { padding: 12px 14px; margin-bottom: 10px; }
+  .painel h2 { margin-bottom: 6px; }
+  .fluxo.pdf td { padding-top: 2px; padding-bottom: 2px; }
+  .aviso-legal { font-size: 10px; padding-top: 6px; margin: 0; }
   body { padding: 12mm 12mm 10mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .nao-imprimir { display: none !important; }
   .so-imprimir { display: block; }
@@ -133,7 +150,9 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .fluxo th { position: static; }
   body { background: #fff; font-size: 11px; }
   .entradas, .acoes, .toggle { display: none; }
-  .so-imprimir.cards { display: grid; }
+  .so-imprimir.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .card { padding: 10px 12px; }
+  .card strong { font-size: 17px; }
     .topo { display: none; }
   .ilustrativo.so-imprimir { display: block; margin-top: 14px; }
   .grade { display: block; padding: 0; }

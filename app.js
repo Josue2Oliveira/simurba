@@ -110,8 +110,8 @@ function tabelaPdf(s, p) {
   for (const g of grupos) {
     const ehM = g.tipo === "M";
     const parc = g.qtd > 1 ? `${g.ini.numero} a ${g.fim.numero} <small>(${g.qtd}x)</small>` : `${g.ini.numero}`;
-    const venc = g.qtd > 1 ? `${fmtData(g.ini.venc)} a ${fmtData(g.fim.venc)}` : fmtData(g.ini.venc);
-    const pj = !proj ? "" : `<td>${g.qtd > 1 && ehM ? `${brl(g.projIni)} a ${brl(g.projFim)}` : brl(g.projIni)}</td>`;
+    const venc = g.qtd > 1 ? `${fmtData(g.ini.venc)}<br><small>a</small> ${fmtData(g.fim.venc)}` : fmtData(g.ini.venc);
+    const pj = !proj ? "" : `<td>${g.qtd > 1 && ehM ? `${brl(g.projIni)}<br><small>a</small> ${brl(g.projFim)}` : brl(g.projIni)}</td>`;
     t += `<tr class="${g.intermTaxa || g.balaoTaxa ? "int" : ""}"><td>${parc}</td><td>${g.tipoLabel}</td><td>${venc}</td>` +
       `<td>${brl(g.parcela)}${ehM ? ipcaTag : ""}</td>` +
       (temServ ? `<td>${g.serv ? brl(g.serv) : ""}</td>` : "") +
