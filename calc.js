@@ -22,11 +22,12 @@ const ym = (d) => `${d.getMonth() + 1}/${d.getFullYear()}`;
 export const EMPREENDIMENTOS = {
   moinho: {
     nome: "Recanto do Moinho", jurosZeroAte: 48,
-    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false,
+    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false, balaoMaxPct: 0,
   },
   botanique: {
     nome: "Botanique Residence", jurosZeroAte: 60,
     entradaMin: 0.10, atoMin: 0.025, intermMaxPct: 0.40, limiteQtdInterm: true, // 6 (prazo ≥ 72x) ou 4 (< 72x)
+    balaoMaxPct: 0.40, // balão final: até 40% do valor da proposta (já com desconto), limite separado das intermediárias
   },
 };
 export const IDADE_MAXIMA = 80; // idade do cliente na última parcela (ambos)
@@ -38,13 +39,18 @@ export const DEFAULTS = {
   entradaPct: 0.10,
   comissaoPct: 0,
   qtdComissao: 1,
+  entradaModo: "valor",            // "valor" (R$) ou "pct" (% da proposta) — só muda a forma de digitar
   sinal: 5500,
   entradaGrupos: [{ qtd: 12, valor: 1350 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
   dataNascimento: "",              // "AAAA-MM-DD"
+  // dados só de exibição / PDF
+  nomeCliente: "", quadra: "", lote: "", area: 0,
+  pdfM2: false, pdfServico: true, pdfIpca: false, ipcaAnual: 0.0441,
   prazo: 144,
   taxa: 0.0089,
   diaVenc: 25,
   intermQtd: 0,
+  balaoPct: 0,                     // balão final (% da proposta) — só Botanique
   intermValor: 0,
   intermPrimeiroVenc: "",          // "AAAA-MM-DD"
   intermPeriodicidade: "Anual",    // "Anual" | "Semestral"
@@ -72,13 +78,17 @@ export function simular(inp) {
   const qtdComissao = Math.max(1, Math.round(p.qtdComissao || 1));
   const comissaoParcela = comissao / qtdComissao;                       // BK9
   const valorVenda = p.valorProposta - comissao;                        // H5 (venda CRM)
-  const entradaPctLiq = p.entradaPct - p.comissaoPct;                   // H7
+  const entradaPctLiq = p.entradaPct;                                   // entrada Urba (sem a comissão)
   const entradaTotalEsperada = entradaPctLiq * p.valorProposta;         // % sobre a proposta
   const grupos = p.entradaGrupos.filter((g) => g.qtd > 0);
   const nEntrada = grupos.reduce((s, g) => s + g.qtd, 0);               // B12
   const totalEntradaExSinal = grupos.reduce((s, g) => s + g.qtd * g.valor, 0); // B11
   const totalInterm = p.intermQtd * p.intermValor;                      // H24
-  const financiamento = valorVenda - p.sinal - totalEntradaExSinal - totalInterm; // H18
+  // Balão final (modelo "intermediária"): sai do financiamento e é pago com a última parcela,
+  // corrigido pela taxa da intermediária (1 + taxa)^nº da parcela
+  const empB = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
+  const balao = empB.balaoMaxPct > 0 ? Math.max(0, p.balaoPct || 0) * p.valorProposta : 0;
+  const financiamento = valorVenda - p.sinal - totalEntradaExSinal - totalInterm - balao; // H18
 
   const fatorEntrada = Math.pow(1 + r, nEntrada);
   const pmtPrincipal = pmt(r, p.prazo, financiamento);                  // C19
@@ -131,7 +141,7 @@ export function simular(inp) {
     if (k === 0) { parcela = p.sinal; principal = p.sinal; juros = 0; saldoAntigo -= p.sinal; }
     else if (tipo === "E") { parcela = valorEntrada(k); principal = parcela; juros = 0; saldoAntigo -= parcela; }
     else {
-      if (k === nEntrada + 1) saldoAntigo -= totalInterm;
+      if (k === nEntrada + 1) saldoAntigo -= totalInterm + balao;
       const jAnt = saldoAntigo * r;
       principal = pmtPrincipal - jAnt;
       juros = jAnt + pmtJuros;
@@ -146,9 +156,11 @@ export function simular(inp) {
     if (intermCRM > 0) { if (tipo === "E") intermNaEntrada = true; else intermContadas++; }
     const intermTaxa = tipo === "M" ? Math.pow(1 + p.intermTaxa, numero) * intermCRM : 0;
     const comissaoMes = comissao > 0 && numero <= qtdComissao ? comissaoParcela : 0;
-    const total = parcela + intermTaxa + comissaoMes;
+    const balaoCRM = k === prazoTotal && tipo === "M" ? balao : 0;
+    const balaoTaxa = balaoCRM * Math.pow(1 + p.intermTaxa, numero);
+    const total = parcela + intermTaxa + comissaoMes + balaoTaxa;
     somaCorrigida += corrigida; somaTotal += total;
-    linhas.push({ numero, tipo, venc, parcela, principal, juros, corrigida, intermCRM, intermTaxa, comissaoMes, total });
+    linhas.push({ numero, tipo, venc, parcela, principal, juros, corrigida, intermCRM, intermTaxa, balaoCRM, balaoTaxa, comissaoMes, total });
   }
 
   // Regras (planilha H34:H39 + regras da coluna CB)
@@ -158,6 +170,8 @@ export function simular(inp) {
   const pc = (x) => { const v = Math.round(x * 1000) / 10; return (Number.isInteger(v) ? v : v.toFixed(1).replace(".", ",")) + "%"; };
   add(`Intermediárias até ${pc(emp.intermMaxPct)} do valor da venda`, totalInterm / valorVenda <= emp.intermMaxPct + 1e-9,
     `A soma das intermediárias (${pct(totalInterm / valorVenda)}) ultrapassa ${pc(emp.intermMaxPct)} do valor da venda. Reduza a quantidade ou o valor.`);
+  if (balao > 0) add(`Balão final até ${pc(emp.balaoMaxPct)} do valor da venda`, balao / p.valorProposta <= emp.balaoMaxPct + 1e-9,
+    `O balão final (${pct(balao / p.valorProposta)}) ultrapassa ${pc(emp.balaoMaxPct)} do valor da venda.`);
   if (emp.limiteQtdInterm && p.intermQtd > 0) {
     const max = p.prazo >= 72 ? 6 : 4;
     add(`No máximo ${max} intermediárias (${p.prazo >= 72 ? "plano longo, 72x ou mais" : "plano curto, menos de 72x"})`, p.intermQtd <= max,
@@ -176,7 +190,7 @@ export function simular(inp) {
     `O sinal (ato) está em ${pct(p.sinal / p.valorProposta)}; o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
   // entrada real = sinal + parcelas de entrada + comissão apartada
   const entradaReal = p.sinal + totalEntradaExSinal + comissao;
-  add(`Entrada mínima de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,
+  add(`Entrada${comissao > 0 ? " + comissão" : ""}: mínimo de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,
     `Sinal + parcelas de entrada${comissao > 0 ? " + comissão" : ""} somam ${brl(entradaReal)} (${pct(entradaReal / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.entradaMin)}.`);
   // idade do cliente na última parcela
   const ultimaParcela = linhas[linhas.length - 1].venc;
@@ -198,7 +212,7 @@ export function simular(inp) {
   const entradaInformada = p.sinal + totalEntradaExSinal;
   const avisos = [];
   if (Math.abs(entradaInformada - entradaTotalEsperada) > 1)
-    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a proposta (já descontada a comissão) é ${brl(entradaTotalEsperada)}.`);
+    avisos.push(`Sinal + parcelas de entrada somam ${brl(entradaInformada)}, mas a entrada de ${pct(entradaPctLiq)} sobre a proposta é ${brl(entradaTotalEsperada)}.`);
 
   return {
     params: p,
@@ -212,6 +226,7 @@ export function simular(inp) {
       descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - p.valorProposta) / p.valorTabela : 0,
       entradaEfetivaPct: entradaInformada / p.valorProposta,
       nEntrada, totalEntradaExSinal, totalInterm, intermPct: totalInterm / valorVenda,
+      balao, balaoPct: balao / p.valorProposta, balaoFinal: linhas[linhas.length - 1].balaoTaxa,
       financiamento, jurosPeriodoEntrada, baseCalculoPrice: financiamento * fatorEntrada,
       parcelaMensal, pmtPrincipal, pmtJuros, prazoTotal,
       somaCorrigida, somaTotal,

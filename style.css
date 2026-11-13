@@ -25,6 +25,13 @@ input, select { display: block; width: 100%; margin-top: 4px; padding: 8px 10px;
   font: inherit; color: var(--ink); background: #f1f7f3; }
 input:focus, select:focus { outline: 2px solid var(--verde); background: #fff; }
 .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tripla { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; }
+.opc { color: #9aa59f; font-size: 11px; }
+.modo-entrada { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.modo-entrada label.check { margin: 0; }
+label.check { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; }
+label.check input { width: auto; margin: 0; accent-color: var(--verde); }
+.fluxo.pdf td small { color: var(--muted); }
 .emp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .emp-op { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px;
   color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; background: #f1f7f3; }
@@ -93,6 +100,28 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 .fluxo tr.totalgeral td { font-weight: 700; border-top: 2px solid var(--ink); }
 .fluxo tr.totalgeral td:last-child { text-align: right; }
 
+/* ---------- cabeçalho da simulação (tela e PDF) ---------- */
+.cab { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 28px;
+  background: var(--card); border: 1px solid var(--line); border-left: 8px solid var(--verde);
+  border-radius: 14px; padding: 24px 28px; margin-bottom: 18px; }
+.cab-marca { display: flex; flex-direction: column; align-items: flex-start; padding-right: 28px; border-right: 1px solid var(--line); }
+.marca { font-size: 22px; font-weight: 800; letter-spacing: .12em; color: var(--verde); }
+.marca-sub { font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+.cab-rotulo { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.cab-titulo { margin: 4px 0 0; font-size: 30px; line-height: 1.15; font-weight: 700; color: var(--ink); }
+.cab-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.chip { display: flex; flex-direction: column; padding: 6px 14px; border: 1.5px solid var(--verde); border-radius: 10px; background: var(--verde-claro); }
+.chip small { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--verde); }
+.chip b { font-size: 18px; color: var(--ink); }
+.cab-meta { display: flex; flex-direction: column; gap: 12px; text-align: right; }
+.cab-meta small { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.cab-meta b { font-size: 15px; }
+@media (max-width: 900px) {
+  .cab { grid-template-columns: 1fr; gap: 14px; }
+  .cab-marca { border-right: 0; padding-right: 0; }
+  .cab-meta { text-align: left; flex-direction: row; gap: 24px; }
+}
+
 @media print {
   .nao-imprimir { display: none !important; }
   .so-imprimir { display: block; }
@@ -100,6 +129,9 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .fluxo th { position: static; }
   body { background: #fff; font-size: 11px; }
   .entradas, .acoes, .toggle { display: none; }
+  .so-imprimir.cards { display: grid; }
+    .topo { display: none; }
+  .ilustrativo.so-imprimir { display: block; margin-top: 14px; }
   .grade { display: block; padding: 0; }
   .topo { background: #fff; color: var(--ink); padding: 0 0 10px; }
   .topo .sub { opacity: 1; font-size: 13px; }
@@ -113,4 +145,23 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
   .painel.so-imprimir { break-inside: auto; }
   .fluxo thead { display: table-header-group; }
   .fluxo tr { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cab { padding: 18px 22px; margin-bottom: 14px; break-inside: avoid; }
+  .cab { grid-template-columns: auto 1fr auto; gap: 22px; }
+  .cab-marca { border-right: 1px solid var(--line); padding-right: 22px; }
+  .cab-meta { flex-direction: column; text-align: right; gap: 10px; }
+  .cab-titulo { font-size: 26px; }
+
+  /* ---------- modo preto e branco ---------- */
+  body.pb { --verde: #000; --verde-claro: #fff; --erro: #000; --erro-claro: #fff; --int: #ececec; --muted: #444; --line: #bbb; --ink: #000; }
+  body.pb .cab { border-left-width: 8px; }
+  body.pb .chip { background: #fff; }
+  body.pb .faixa-juros { background: #fff; border: 1.5px solid #000; color: #000; }
+  body.pb .faixa-juros strong { background: #000; color: #fff; }
+  body.pb .fora-politica.ativo { background: #fff; border: 2.5px solid #000; color: #000; }
+  body.pb .card, body.pb .painel { border-color: #999; }
+  body.pb .card:first-child { border: 2px solid #000; }
+  body.pb .ipca { color: #000; }
+  body.pb .fluxo tr.int td { background: #e6e6e6; font-weight: 600; }
+  body.pb .card.desconto small b { color: #000; }
 }

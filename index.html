@@ -16,7 +16,8 @@
   </div>
   <div class="acoes">
     <button id="btnCsv" class="btn sec">Baixar CSV</button>
-    <button id="btnPrint" class="btn sec">Imprimir / PDF</button>
+    <button id="btnPrint" class="btn sec">Imprimir colorido</button>
+    <button id="btnPrintPB" class="btn sec">Imprimir preto e branco</button>
     <button id="btnReset" class="btn sec">Restaurar exemplo</button>
   </div>
 </header>
@@ -34,13 +35,24 @@
     </fieldset>
 
     <fieldset>
+      <legend>Cliente e imóvel</legend>
+      <label>Nome do cliente <span class="opc">(opcional)</span> <input type="text" name="nomeCliente" /></label>
+      <label>Data de nascimento do cliente <input type="date" name="dataNascimento" /></label>
+      <div class="tripla">
+        <label>Quadra <span class="opc">(opc.)</span> <input type="text" name="quadra" /></label>
+        <label>Lote <span class="opc">(opc.)</span> <input type="text" name="lote" /></label>
+        <label>Área (m²) <input type="number" step="0.01" name="area" /></label>
+      </div>
+      <p class="dica" id="dicaLote"></p>
+    </fieldset>
+
+    <fieldset>
       <legend>Venda</legend>
       <label>Data da simulação <input type="date" name="dataSimulacao" /></label>
-      <label>Data de nascimento do cliente <input type="date" name="dataNascimento" /></label>
       <label>Valor da proposta (R$) <input type="number" step="0.01" name="valorProposta" /></label>
       <label>Valor de tabela (R$) <input type="number" step="0.01" name="valorTabela" /></label>
       <p class="dica">O cálculo usa só o valor da proposta. A tabela serve apenas para mostrar o desconto ao cliente.</p>
-      <label>Entrada (%) <input type="number" step="0.01" name="entradaPct" data-pct /></label>
+      <label>Entrada (%) <span class="opc">sem a comissão</span> <input type="number" step="0.01" name="entradaPct" data-pct /></label>
       <div class="dupla">
         <label>Comissão apartada (%) <input type="number" step="0.01" name="comissaoPct" data-pct /></label>
         <label>Qtd. parcelas da comissão <input type="number" min="1" name="qtdComissao" /></label>
@@ -50,9 +62,16 @@
 
     <fieldset>
       <legend>Entrada</legend>
-      <label>Sinal / ato (R$) <input type="number" step="0.01" name="sinal" /></label>
-      <p class="dica">Divisão do restante da entrada (até 3 faixas)</p>
+      <div class="modo-entrada">
+        <span>Informar em:</span>
+        <label class="check"><input type="radio" name="entradaModo" value="valor" /> R$</label>
+        <label class="check"><input type="radio" name="entradaModo" value="pct" /> % da proposta</label>
+      </div>
+      <label><span id="rotSinal">Sinal / ato (R$)</span> <input type="number" step="0.01" name="sinal" /></label>
+      <p class="dica" id="dicaSinal"></p>
+      <p class="dica">Divisão do restante da entrada (até 3 faixas) — <span id="rotFaixa">valor de cada parcela</span></p>
       <div class="faixas" id="faixas"></div>
+      <p class="dica" id="dicaFaixas"></p>
     </fieldset>
 
     <fieldset>
@@ -82,21 +101,30 @@
       <label>Taxa da intermediária (% a.m.) <input type="number" step="0.01" name="intermTaxa" data-pct /></label>
     </fieldset>
 
-    <details>
-      <summary>Parâmetros avançados</summary>
-      <label>Correção estimada das mensais (% a.m.) <input type="number" step="0.01" name="correcaoMensal" data-pct /></label>
-    </details>
+    <fieldset id="campoBalao">
+      <legend>Balão final</legend>
+      <label>Balão final (% do valor da venda) <input type="number" step="0.01" min="0" max="40" name="balaoPct" data-pct /></label>
+      <p class="dica" id="dicaBalao"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Opções do PDF</legend>
+      <label class="check"><input type="checkbox" name="pdfM2" /> Mostrar valor do m²</label>
+      <label class="check"><input type="checkbox" name="pdfServico" /> Mostrar serviço (comissão apartada)</label>
+      <label class="check"><input type="checkbox" name="pdfIpca" /> Mostrar projeção com IPCA</label>
+      <label>IPCA projetado (% ao ano) <input type="number" step="0.01" name="ipcaAnual" data-pct /></label>
+      <p class="dica" id="dicaIpca"></p>
+    </fieldset>
   </form>
 
   <!-- RESULTADOS -->
   <section class="resultados">
-    <div class="ilustrativo"><strong>SIMULAÇÃO ILUSTRATIVA</strong>
-      Os valores desta simulação são apenas uma estimativa e não constituem proposta, oferta ou compromisso.
-      As condições válidas são exclusivamente as que constarem no contrato assinado.</div>
+    <header class="cab" id="cabPdf"></header>
     <div id="foraPolitica" class="fora-politica"></div>
     <div id="faixaJuros" class="faixa-juros"></div>
     <div id="alerta" class="alerta nao-imprimir"></div>
-    <div class="cards" id="cards"></div>
+    <div class="cards nao-imprimir" id="cards"></div>
+    <div class="cards so-imprimir" id="cardsPdf"></div>
 
     <div class="painel nao-imprimir">
       <h2>Regras comerciais</h2>
@@ -121,9 +149,10 @@
 
     <div class="painel so-imprimir">
       <h2>Plano de pagamentos</h2>
-      <table class="fluxo" id="tabelaPdf"></table>
-      <p class="nota-ipca">As parcelas do financiamento (mensais) são corrigidas mensalmente pelo IPCA. O total acima não inclui essa correção.</p>
+      <table class="fluxo pdf" id="tabelaPdf"></table>
+      <p class="nota-ipca" id="notaIpca"></p>
     </div>
+
 
     <p class="aviso-legal"><strong>Importante:</strong> esta simulação tem caráter meramente ilustrativo. Valor do lote, desconto, entrada,
       parcelas, intermediárias, datas e taxas podem sofrer alterações e não vinculam as partes. Prevalecem sempre as condições
