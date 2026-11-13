@@ -26,7 +26,7 @@ export const EMPREENDIMENTOS = {
   },
   botanique: {
     nome: "Botanique Residence", jurosZeroAte: 60,
-    entradaMin: 0.10, atoMin: 0.025, intermMaxPct: 0.40, limiteQtdInterm: true, // 6 (prazo ≥ 72x) ou 4 (< 72x)
+    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.40, limiteQtdInterm: true, // 6 (prazo ≥ 72x) ou 4 (< 72x)
     balaoMaxPct: 0.40, // balão final: até 40% do valor da proposta (já com desconto), limite separado das intermediárias
   },
 };
@@ -186,10 +186,9 @@ export function simular(inp) {
     add("Intermediárias vencem dia 10 ou 26", dia === 10 || dia === 26,
       "O vencimento das intermediárias deve ser dia 10 ou 26.");
   }
-  // ato = sinal + 1ª parcela da comissão apartada (pagos juntos)
-  const ato = p.sinal + (comissao > 0 ? comissaoParcela : 0);
-  add(`Ato${comissao > 0 ? " + 1ª parcela da comissão" : ""}: mínimo de ${pc(emp.atoMin)}`, ato / p.valorProposta >= emp.atoMin - 0.0001,
-    `O ato${comissao > 0 ? ` (sinal ${brl(p.sinal)} + comissão ${brl(comissaoParcela)})` : ""} soma ${brl(ato)} (${pct(ato / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
+  // ato Urba = só o sinal (o serviço/comissão não tem mínimo; quem define é o corretor)
+  add(`Ato Urba mínimo de ${pc(emp.atoMin)}`, p.sinal / p.valorProposta >= emp.atoMin - 0.0001,
+    `O ato Urba (sinal) está em ${brl(p.sinal)} (${pct(p.sinal / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
   // entrada real = sinal + parcelas de entrada + comissão apartada
   const entradaReal = p.sinal + totalEntradaExSinal + comissao;
   add(`Entrada${comissao > 0 ? " + comissão" : ""}: mínimo de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,
