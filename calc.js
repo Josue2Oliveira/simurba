@@ -172,10 +172,10 @@ export function simular(inp) {
     `A soma das intermediárias (${pct(totalInterm / valorVenda)}) ultrapassa ${pc(emp.intermMaxPct)} do valor da venda. Reduza a quantidade ou o valor.`);
   if (balao > 0) add(`Balão final até ${pc(emp.balaoMaxPct)} do valor da venda`, balao / p.valorProposta <= emp.balaoMaxPct + 1e-9,
     `O balão final (${pct(balao / p.valorProposta)}) ultrapassa ${pc(emp.balaoMaxPct)} do valor da venda.`);
-  if (emp.limiteQtdInterm && p.intermQtd > 0) {
-    const max = p.prazo >= 72 ? 6 : 4;
-    add(`No máximo ${max} intermediárias (${p.prazo >= 72 ? "plano longo, 72x ou mais" : "plano curto, menos de 72x"})`, p.intermQtd <= max,
-      `Com ${p.prazo} meses de financiamento são permitidas no máximo ${max} intermediárias.`);
+  if (emp.limiteQtdInterm && p.intermQtd > 0 && p.prazo >= 72) {
+    // plano longo (72x ou mais): no máximo 6 intermediárias; plano curto sem limite de quantidade
+    add("No máximo 6 intermediárias (plano longo, 72x ou mais)", p.intermQtd <= 6,
+      `Com ${p.prazo} meses de financiamento são permitidas no máximo 6 intermediárias.`);
   }
   if (p.intermQtd > 0) {
     add("Intermediárias dentro do período das mensais", !intermNaEntrada && intermContadas >= p.intermQtd,
@@ -186,8 +186,10 @@ export function simular(inp) {
     add("Intermediárias vencem dia 10 ou 26", dia === 10 || dia === 26,
       "O vencimento das intermediárias deve ser dia 10 ou 26.");
   }
-  add(`Ato mínimo de ${pc(emp.atoMin)}`, p.sinal / p.valorProposta >= emp.atoMin - 0.0001,
-    `O sinal (ato) está em ${pct(p.sinal / p.valorProposta)}; o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
+  // ato = sinal + 1ª parcela da comissão apartada (pagos juntos)
+  const ato = p.sinal + (comissao > 0 ? comissaoParcela : 0);
+  add(`Ato${comissao > 0 ? " + 1ª parcela da comissão" : ""}: mínimo de ${pc(emp.atoMin)}`, ato / p.valorProposta >= emp.atoMin - 0.0001,
+    `O ato${comissao > 0 ? ` (sinal ${brl(p.sinal)} + comissão ${brl(comissaoParcela)})` : ""} soma ${brl(ato)} (${pct(ato / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
   // entrada real = sinal + parcelas de entrada + comissão apartada
   const entradaReal = p.sinal + totalEntradaExSinal + comissao;
   add(`Entrada${comissao > 0 ? " + comissão" : ""}: mínimo de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,

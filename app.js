@@ -201,7 +201,7 @@ function render() {
     : `<strong>JUROS ZERO EM ATÉ ${lim}x</strong> No ${e.nome}, o financiamento em até ${lim}x não tem juros.`;
   $("dicaJuros").textContent = `Juros zero até ${lim}x · 0,89% a.m. até 144x · 0,92% a.m. até 180x. ` +
     `Entrada mín. ${fp(e.entradaMin, 1)} · ato mín. ${fp(e.atoMin, 1)} · intermediárias até ${fp(e.intermMaxPct, 1)}` +
-    (e.limiteQtdInterm ? " (máx. 6 no plano longo, 4 no curto)" : "") + ".";
+    (e.limiteQtdInterm ? " (máx. 6 no plano de 72x ou mais)" : "") + ".";
   const prop = p.valorProposta || 1;
   $("dicaSinal").textContent = p.sinal ? `= ${brl(p.sinal)} · ${fp(p.sinal / prop)} da proposta` : "";
   $("dicaFaixas").innerHTML = p.entradaGrupos.filter((g) => g.qtd > 0).map((g, i) =>
