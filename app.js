@@ -36,6 +36,7 @@ function preencher(p) {
   form.sinal.value = !p.sinal ? "" : pctMode ? +(p.sinal / p.valorProposta * 100).toFixed(4) : p.sinal;
   desenharFaixas(p.entradaGrupos, pctMode, p.valorProposta);
   form.intermValor.value = !p.intermValor ? (p.intermValor === 0 ? 0 : "") : p.intermModo === "pct" ? +(p.intermValor / p.valorProposta * 100).toFixed(4) : p.intermValor;
+  form.balaoPct.value = !p.balaoPct ? 0 : p.balaoModo === "valor" ? +(p.balaoPct * p.valorProposta).toFixed(2) : +(p.balaoPct * 100).toFixed(4);
   rotulosEntrada();
 }
 
@@ -52,6 +53,7 @@ function ler() {
   // sinal e faixas: se informados em %, convertem para R$ sobre o valor da proposta
   const conv = (v) => p.entradaModo === "pct" ? Math.round(v / 100 * p.valorProposta * 100) / 100 : v;
   p.sinal = conv(p.sinal);
+  p.balaoPct = p.balaoModo === "valor" ? (p.valorProposta ? p.balaoPct / p.valorProposta : 0) : p.balaoPct / 100;
   if (p.intermModo === "pct") p.intermValor = Math.round(p.intermValor / 100 * p.valorProposta * 100) / 100;
   p.entradaGrupos = [0, 1, 2].map((i) => ({
     qtd: parseInt(form.querySelector(`[data-faixa="${i}"][data-campo="qtd"]`).value) || 0,
@@ -143,10 +145,10 @@ function cards(s, p, modoPdf) {
     ? `<div class="card desconto"><span>Valor da proposta</span><strong>${brl(r.valorProposta)}</strong><small><s>Tabela ${brl(r.valorTabela)}</s><br><b>Desconto de ${brl(r.desconto)} (${pct(r.descontoPct)})</b></small></div>`
     : card("Valor da proposta", brl(r.valorProposta));
   h += card("Entrada total", brl(entrada), `${pct(entrada / r.valorProposta)} · ${mostrarServ ? `inclui ${nomeServ.toLowerCase()} de ${brl(r.comissao)}` : `sinal + ${r.nEntrada} parcelas`}`);
+  h += card("Valor financiado", brl(r.financiamento));
   if (mostrarServ) h += card(nomeServ, brl(r.comissao), `${r.qtdComissao}× de ${brl(r.comissaoParcela)}`);
   if (r.totalInterm > 0 || !modoPdf) h += card("Intermediárias", brl(r.totalInterm), pct(r.intermPct));
   if (r.balao > 0) h += card("Balão final", brl(r.balaoFinal), `${pct(r.balaoPct)} da venda (${brl(r.balao)}) · com a última parcela`);
-  h += card("Valor financiado", brl(r.financiamento));
   if (p.area > 0 && (!modoPdf || p.pdfM2)) {
     const m2 = r.valorProposta / p.area;
     const extra = r.desconto > 0 ? `<s>Tabela ${brl(r.valorTabela / p.area)}/m²</s> · ${num2(p.area)} m²` : `${num2(p.area)} m²`;
@@ -201,7 +203,7 @@ function render() {
   $("faixaJuros").innerHTML = semJuros
     ? `<strong>JUROS ZERO</strong> Esta simulação em ${p.prazo}x não tem juros. ${e.nome}: financiamento sem juros em até ${lim}x.`
     : `<strong>JUROS ZERO EM ATÉ ${lim}x</strong> No ${e.nome}, o financiamento em até ${lim}x não tem juros.`;
-  $("dicaJuros").textContent = `Juros zero até ${lim}x · 0,89% a.m. até 144x · 0,92% a.m. até 180x. ` +
+  $("dicaJuros").textContent = `Juros zero até ${lim}x · ${e.faixasJuros.map(([ate, tx]) => `${fp(tx)} a.m. até ${ate}x`).join(" · ")}. ` +
     `Entrada mín. ${fp(e.entradaMin, 1)} · ato mín. ${fp(e.atoMin, 1)} · intermediárias até ${fp(e.intermMaxPct, 1)}` +
     (e.limiteQtdInterm ? " (máx. 6 no plano de 72x ou mais)" : "") + ".";
   const prop = p.valorProposta || 1;
@@ -290,6 +292,7 @@ function rotulosEntrada() {
   const pc = emPct();
   $("rotSinal").textContent = pc ? "Sinal / ato (% da proposta)" : "Sinal / ato (R$)";
   $("rotInterm").textContent = form.querySelector('[name="intermModo"]:checked')?.value === "pct" ? "% de cada (sobre a proposta)" : "Valor de cada (R$)";
+  $("rotBalao").textContent = form.querySelector('[name="balaoModo"]:checked')?.value === "valor" ? "Balão final (R$)" : "Balão final (% do valor da venda)";
   $("rotFaixa").textContent = pc ? "percentual de cada parcela sobre a proposta" : "valor de cada parcela";
 }
 // troca R$ <-> %: converte os números digitados para manter os mesmos valores
@@ -308,6 +311,11 @@ function trocarModoEntrada() {
 form.addEventListener("input", (ev) => {
   const n = ev.target.name;
   if (n === "entradaModo") trocarModoEntrada();
+  if (n === "balaoModo") {
+    const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.balaoPct.value);
+    if (v && proposta) form.balaoPct.value = ev.target.value === "valor" ? +(v / 100 * proposta).toFixed(2) : +(v / proposta * 100).toFixed(4);
+    rotulosEntrada();
+  }
   if (n === "intermModo") {
     const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.intermValor.value);
     if (v && proposta) form.intermValor.value = ev.target.value === "pct" ? +(v / proposta * 100).toFixed(4) : +(v / 100 * proposta).toFixed(2);

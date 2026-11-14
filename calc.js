@@ -22,10 +22,12 @@ const ym = (d) => `${d.getMonth() + 1}/${d.getFullYear()}`;
 export const EMPREENDIMENTOS = {
   moinho: {
     nome: "Recanto do Moinho", jurosZeroAte: 48,
+    faixasJuros: [[144, 0.0089], [180, 0.0092]],   // [prazo até, taxa a.m.] depois do juros zero
     entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false, balaoMaxPct: 0,
   },
   botanique: {
     nome: "Botanique Residence", jurosZeroAte: 60,
+    faixasJuros: [[120, 0.0085], [180, 0.0092]],
     entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.40, limiteQtdInterm: true, // 6 (prazo ≥ 72x) ou 4 (< 72x)
     balaoMaxPct: 0.40, // balão final: até 40% do valor da proposta (já com desconto), limite separado das intermediárias
   },
@@ -51,6 +53,7 @@ export const DEFAULTS = {
   diaVenc: 25,
   intermModo: "valor",             // "valor" (R$) ou "pct" (% da proposta, por parcela)
   intermQtd: 0,
+  balaoModo: "pct",                // "pct" (% da proposta) ou "valor" (R$) — só muda a forma de digitar
   balaoPct: 0,                     // balão final (% da proposta) — só Botanique
   intermValor: 0,
   intermPrimeiroVenc: "",          // "AAAA-MM-DD"
@@ -60,13 +63,13 @@ export const DEFAULTS = {
   dataSimulacao: "",               // "AAAA-MM-DD"; vazio = hoje
 };
 
-// Política de juros por empreendimento
-// Juros zero até 48x (Moinho) ou 60x (Botanique); depois 0,89% até 144x e 0,92% até 180x (ambos)
+// Política de juros por empreendimento (faixas em EMPREENDIMENTOS)
+// Moinho: zero até 48x · 0,89% até 144x · 0,92% até 180x
+// Botanique: zero até 60x · 0,85% até 120x · 0,92% até 180x
 export function taxaPolitica(prazo, empreendimento = "moinho") {
   const emp = EMPREENDIMENTOS[empreendimento] || EMPREENDIMENTOS.moinho;
   if (prazo <= emp.jurosZeroAte) return 0;
-  if (prazo <= 144) return 0.0089;
-  if (prazo <= 180) return 0.0092;
+  for (const [ate, taxa] of emp.faixasJuros) if (prazo <= ate) return taxa;
   return null;
 }
 

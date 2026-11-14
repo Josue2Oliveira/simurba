@@ -33,7 +33,7 @@ Tudo em `calc.js`:
 - `EMPREENDIMENTOS` — regras de cada produto: juros zero até (48x Moinho / 60x Botanique), entrada mínima (10%),
   ato mínimo (1% Moinho / 2,5% Botanique), limite de intermediárias (30% / 40%) e limite de quantidade (só Botanique: 6 ou 4).
 - `IDADE_MAXIMA` — idade máxima do cliente na última parcela (80 anos, ambos).
-- `taxaPolitica()` — 0,89% a.m. até 144x e 0,92% a.m. até 180x (ambos).
+- Juros (`faixasJuros` em `EMPREENDIMENTOS`): Moinho 0,89% a.m. até 144x e 0,92% até 180x; Botanique 0,85% a.m. até 120x e 0,92% até 180x.
 - `DEFAULTS` — valores iniciais do formulário.
 
 Se alguma regra não for atendida, a simulação continua funcionando e o PDF sai marcado como
