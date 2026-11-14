@@ -49,6 +49,7 @@ export const DEFAULTS = {
   prazo: 144,
   taxa: 0.0089,
   diaVenc: 25,
+  intermModo: "valor",             // "valor" (R$) ou "pct" (% da proposta, por parcela)
   intermQtd: 0,
   balaoPct: 0,                     // balão final (% da proposta) — só Botanique
   intermValor: 0,

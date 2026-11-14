@@ -35,6 +35,7 @@ function preencher(p) {
   const pctMode = p.entradaModo === "pct";
   form.sinal.value = !p.sinal ? "" : pctMode ? +(p.sinal / p.valorProposta * 100).toFixed(4) : p.sinal;
   desenharFaixas(p.entradaGrupos, pctMode, p.valorProposta);
+  form.intermValor.value = !p.intermValor ? (p.intermValor === 0 ? 0 : "") : p.intermModo === "pct" ? +(p.intermValor / p.valorProposta * 100).toFixed(4) : p.intermValor;
   rotulosEntrada();
 }
 
@@ -51,6 +52,7 @@ function ler() {
   // sinal e faixas: se informados em %, convertem para R$ sobre o valor da proposta
   const conv = (v) => p.entradaModo === "pct" ? Math.round(v / 100 * p.valorProposta * 100) / 100 : v;
   p.sinal = conv(p.sinal);
+  if (p.intermModo === "pct") p.intermValor = Math.round(p.intermValor / 100 * p.valorProposta * 100) / 100;
   p.entradaGrupos = [0, 1, 2].map((i) => ({
     qtd: parseInt(form.querySelector(`[data-faixa="${i}"][data-campo="qtd"]`).value) || 0,
     valor: conv(parseFloat(form.querySelector(`[data-faixa="${i}"][data-campo="valor"]`).value) || 0),
@@ -141,10 +143,10 @@ function cards(s, p, modoPdf) {
     ? `<div class="card desconto"><span>Valor da proposta</span><strong>${brl(r.valorProposta)}</strong><small><s>Tabela ${brl(r.valorTabela)}</s><br><b>Desconto de ${brl(r.desconto)} (${pct(r.descontoPct)})</b></small></div>`
     : card("Valor da proposta", brl(r.valorProposta));
   h += card("Entrada total", brl(entrada), `${pct(entrada / r.valorProposta)} · ${mostrarServ ? `inclui ${nomeServ.toLowerCase()} de ${brl(r.comissao)}` : `sinal + ${r.nEntrada} parcelas`}`);
-  h += card("Valor financiado", brl(r.financiamento));
   if (mostrarServ) h += card(nomeServ, brl(r.comissao), `${r.qtdComissao}× de ${brl(r.comissaoParcela)}`);
   if (r.totalInterm > 0 || !modoPdf) h += card("Intermediárias", brl(r.totalInterm), pct(r.intermPct));
   if (r.balao > 0) h += card("Balão final", brl(r.balaoFinal), `${pct(r.balaoPct)} da venda (${brl(r.balao)}) · com a última parcela`);
+  h += card("Valor financiado", brl(r.financiamento));
   if (p.area > 0 && (!modoPdf || p.pdfM2)) {
     const m2 = r.valorProposta / p.area;
     const extra = r.desconto > 0 ? `<s>Tabela ${brl(r.valorTabela / p.area)}/m²</s> · ${num2(p.area)} m²` : `${num2(p.area)} m²`;
@@ -207,6 +209,8 @@ function render() {
   $("dicaFaixas").innerHTML = p.entradaGrupos.filter((g) => g.qtd > 0).map((g, i) =>
     `Faixa ${i + 1}: ${g.qtd}x de ${brl(g.valor)} (${fp(g.valor / prop)} cada · ${fp(g.qtd * g.valor / prop)} no total)`).join("<br>") +
     (r.nEntrada ? `<br><b>Sinal + parcelas: ${brl(r.entradaInformada)} · ${fp(r.entradaInformada / prop)}</b>` : "");
+  $("dicaInterm").textContent = r.totalInterm > 0
+    ? `${p.intermQtd}x de ${brl(p.intermValor)} (${fp(p.intermValor / prop)} cada) · total ${brl(r.totalInterm)} (${fp(r.totalInterm / prop)} da proposta)` : "";
   const podeBalao = e.balaoMaxPct > 0;
   $("campoBalao").style.display = podeBalao ? "" : "none";
   $("dicaBalao").textContent = r.balao > 0
@@ -285,6 +289,7 @@ function aplicarTaxa() {
 function rotulosEntrada() {
   const pc = emPct();
   $("rotSinal").textContent = pc ? "Sinal / ato (% da proposta)" : "Sinal / ato (R$)";
+  $("rotInterm").textContent = form.querySelector('[name="intermModo"]:checked')?.value === "pct" ? "% de cada (sobre a proposta)" : "Valor de cada (R$)";
   $("rotFaixa").textContent = pc ? "percentual de cada parcela sobre a proposta" : "valor de cada parcela";
 }
 // troca R$ <-> %: converte os números digitados para manter os mesmos valores
@@ -303,6 +308,11 @@ function trocarModoEntrada() {
 form.addEventListener("input", (ev) => {
   const n = ev.target.name;
   if (n === "entradaModo") trocarModoEntrada();
+  if (n === "intermModo") {
+    const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.intermValor.value);
+    if (v && proposta) form.intermValor.value = ev.target.value === "pct" ? +(v / proposta * 100).toFixed(4) : +(v / 100 * proposta).toFixed(2);
+    rotulosEntrada();
+  }
   if (n === "empreendimento" || n === "prazo") aplicarTaxa();
   if (n === "empreendimento" || n === "quadra" || n === "lote") atualizarLote();
   render();
