@@ -104,7 +104,7 @@ function tabelaPdf(s, p) {
   const grupos = agrupar(s, p);
   const ipcaTag = ' <span class="ipca">+ IPCA</span>';
   let t = `<thead><tr><th>Parcelas</th><th>Tipo</th><th>Vencimento</th><th>Valor da parcela</th>` +
-    (temServ ? "<th>Serviço</th>" : "") + (temInterm ? "<th>Intermediária</th>" : "") + (temBalao ? "<th>Balão final</th>" : "") +
+    (temServ ? "<th>Intermediação</th>" : "") + (temInterm ? "<th>Intermediária</th>" : "") + (temBalao ? "<th>Balão final</th>" : "") +
     `<th>Total do mês</th>${proj ? "<th>Projeção c/ IPCA</th>" : ""}</tr></thead><tbody>`;
   let soma = 0, somaProj = 0;
   for (const g of grupos) {
@@ -121,11 +121,11 @@ function tabelaPdf(s, p) {
     soma += g.somaTotal; somaProj += g.somaProj;
   }
   const cols = 4 + (temServ ? 1 : 0) + (temInterm ? 1 : 0) + (temBalao ? 1 : 0);
-  t += `<tr class="totalgeral"><td colspan="${cols}">Total a pagar (sem IPCA)</td><td>${brl(soma)}</td>${proj ? `<td>${brl(somaProj)}</td>` : ""}</tr></tbody>`;
+  if (p.pdfTotal) t += `<tr class="totalgeral"><td colspan="${cols}">Total a pagar (sem IPCA)</td><td>${brl(soma)}</td>${proj ? `<td>${brl(somaProj)}</td>` : ""}</tr>`;
+  t += "</tbody>";
   $("tabelaPdf").innerHTML = t;
-  $("notaIpca").textContent = proj
-    ? "As parcelas mensais do financiamento são corrigidas pelo IPCA."
-    : "As parcelas do financiamento (mensais) são corrigidas mensalmente pelo IPCA. O total acima não inclui essa correção.";
+  $("notaIpca").textContent = "As parcelas mensais do financiamento são corrigidas mensalmente pelo IPCA." +
+    (p.pdfTotal ? " O total acima não inclui essa correção." : "");
 }
 
 // ---------- cards ----------
@@ -134,7 +134,7 @@ const card = (t, v, extra = "", cls = "") => `<div class="card ${cls}"><span>${t
 function cards(s, p, modoPdf) {
   const r = s.resumo;
   const mostrarServ = r.comissao > 0 && (!modoPdf || p.pdfServico);
-  const nomeServ = modoPdf ? "Serviço" : "Comissão apartada";
+  const nomeServ = modoPdf ? "Intermediação" : "Comissão apartada";
   const entrada = r.entradaInformada + (mostrarServ ? r.comissao : 0);
   let h = card("Parcela mensal", brl(r.parcelaMensal) + ' <span class="ipca">+ IPCA</span>', `${p.prazo}× após a entrada`);
   h += r.desconto > 0
@@ -237,7 +237,7 @@ function render() {
   ];
   if (r.comissao > 0) m.push([`Comissão apartada: ${r.qtdComissao}× de`, r.comissaoParcela, "forte"]);
   $("dicaComissao").textContent = (r.comissao > 0
-    ? `Comissão de ${brl(r.comissao)} em ${r.qtdComissao}× de ${brl(r.comissaoParcela)}, somada às primeiras ${r.qtdComissao} parcelas. No PDF aparece como "Serviço". ` : "") +
+    ? `Comissão de ${brl(r.comissao)} em ${r.qtdComissao}× de ${brl(r.comissaoParcela)}, somada às primeiras ${r.qtdComissao} parcelas. No PDF aparece como "Intermediação". ` : "") +
     `Entrada + comissão: ${fp(p.entradaPct + p.comissaoPct, 2)} (mínimo ${fp(e.entradaMin, 1)}).`;
   $("memoria").innerHTML = m.map(([t, v, c]) => `<tr class="${c || ""}"><td>${t}</td><td>${brl(v)}</td></tr>`).join("");
 
@@ -266,7 +266,7 @@ const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">"
 // ---------- ações ----------
 function baixarCsv() {
   const num = (v) => v.toFixed(2).replace(".", ",");
-  const linhas = [["Parcela", "Tipo", "Vencimento", "Parcela mensal", "Principal", "Juros", "Valor corrigido (IPCA proj.)", "Intermediária", "Intermediária + taxa", "Balão final", "Comissão (serviço)", "Total"]];
+  const linhas = [["Parcela", "Tipo", "Vencimento", "Parcela mensal", "Principal", "Juros", "Valor corrigido (IPCA proj.)", "Intermediária", "Intermediária + taxa", "Balão final", "Comissão (intermediação)", "Total"]];
   for (const l of ultimo.linhas)
     linhas.push([l.numero, l.tipo, fmtData(l.venc), num(l.parcela), num(l.principal), num(l.juros), num(l.corrigida), num(l.intermCRM), num(l.intermTaxa), num(l.balaoTaxa), num(l.comissaoMes), num(l.total)]);
   const csv = "﻿" + linhas.map((x) => x.join(";")).join("\n");

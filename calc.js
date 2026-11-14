@@ -45,7 +45,7 @@ export const DEFAULTS = {
   dataNascimento: "",              // "AAAA-MM-DD"
   // dados só de exibição / PDF
   nomeCliente: "", quadra: "", lote: "", area: 0,
-  pdfM2: false, pdfServico: true, pdfIpca: false, ipcaAnual: 0.0441,
+  pdfM2: false, pdfServico: true, pdfTotal: false, pdfIpca: false, ipcaAnual: 0.0441,
   prazo: 144,
   taxa: 0.0089,
   diaVenc: 25,
