@@ -39,6 +39,7 @@ export const DEFAULTS = {
   valorTabela: 217000,
   valorProposta: 217000,
   entradaPct: 0.10,
+  entradaTotalModo: "pct",         // "pct" (% da proposta) ou "valor" (R$) — só muda a forma de digitar
   comissaoPct: 0,
   qtdComissao: 1,
   entradaModo: "valor",            // "valor" (R$) ou "pct" (% da proposta) — só muda a forma de digitar

@@ -36,6 +36,7 @@ function preencher(p) {
   form.sinal.value = !p.sinal ? "" : pctMode ? +(p.sinal / p.valorProposta * 100).toFixed(4) : p.sinal;
   desenharFaixas(p.entradaGrupos, pctMode, p.valorProposta);
   form.intermValor.value = !p.intermValor ? (p.intermValor === 0 ? 0 : "") : p.intermModo === "pct" ? +(p.intermValor / p.valorProposta * 100).toFixed(4) : p.intermValor;
+  form.entradaPct.value = !p.entradaPct ? 0 : p.entradaTotalModo === "valor" ? +(p.entradaPct * p.valorProposta).toFixed(2) : +(p.entradaPct * 100).toFixed(6);
   form.balaoPct.value = !p.balaoPct ? 0 : p.balaoModo === "valor" ? +(p.balaoPct * p.valorProposta).toFixed(2) : +(p.balaoPct * 100).toFixed(4);
   rotulosEntrada();
 }
@@ -53,6 +54,7 @@ function ler() {
   // sinal e faixas: se informados em %, convertem para R$ sobre o valor da proposta
   const conv = (v) => p.entradaModo === "pct" ? Math.round(v / 100 * p.valorProposta * 100) / 100 : v;
   p.sinal = conv(p.sinal);
+  p.entradaPct = p.entradaTotalModo === "valor" ? (p.valorProposta ? p.entradaPct / p.valorProposta : 0) : p.entradaPct / 100;
   p.balaoPct = p.balaoModo === "valor" ? (p.valorProposta ? p.balaoPct / p.valorProposta : 0) : p.balaoPct / 100;
   if (p.intermModo === "pct") p.intermValor = Math.round(p.intermValor / 100 * p.valorProposta * 100) / 100;
   p.entradaGrupos = [0, 1, 2].map((i) => ({
@@ -207,6 +209,7 @@ function render() {
     `Entrada mín. ${fp(e.entradaMin, 1)} · ato mín. ${fp(e.atoMin, 1)} · intermediárias até ${fp(e.intermMaxPct, 1)}` +
     (e.limiteQtdInterm ? " (máx. 6 no plano de 72x ou mais)" : "") + ".";
   const prop = p.valorProposta || 1;
+  $("dicaEntrada").textContent = p.entradaPct ? `= ${brl(p.entradaPct * p.valorProposta)} · ${fp(p.entradaPct)} da proposta` : "";
   $("dicaSinal").textContent = p.sinal ? `= ${brl(p.sinal)} · ${fp(p.sinal / prop)} da proposta` : "";
   $("dicaFaixas").innerHTML = p.entradaGrupos.filter((g) => g.qtd > 0).map((g, i) =>
     `Faixa ${i + 1}: ${g.qtd}x de ${brl(g.valor)} (${fp(g.valor / prop)} cada · ${fp(g.qtd * g.valor / prop)} no total)`).join("<br>") +
@@ -292,6 +295,7 @@ function rotulosEntrada() {
   const pc = emPct();
   $("rotSinal").textContent = pc ? "Sinal / ato (% da proposta)" : "Sinal / ato (R$)";
   $("rotInterm").textContent = form.querySelector('[name="intermModo"]:checked')?.value === "pct" ? "% de cada (sobre a proposta)" : "Valor de cada (R$)";
+  $("rotEntrada").textContent = form.querySelector('[name="entradaTotalModo"]:checked')?.value === "valor" ? "Entrada (R$)" : "Entrada (%)";
   $("rotBalao").textContent = form.querySelector('[name="balaoModo"]:checked')?.value === "valor" ? "Balão final (R$)" : "Balão final (% do valor da venda)";
   $("rotFaixa").textContent = pc ? "percentual de cada parcela sobre a proposta" : "valor de cada parcela";
 }
@@ -311,6 +315,11 @@ function trocarModoEntrada() {
 form.addEventListener("input", (ev) => {
   const n = ev.target.name;
   if (n === "entradaModo") trocarModoEntrada();
+  if (n === "entradaTotalModo") {
+    const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.entradaPct.value);
+    if (v && proposta) form.entradaPct.value = ev.target.value === "valor" ? +(v / 100 * proposta).toFixed(2) : +(v / proposta * 100).toFixed(6);
+    rotulosEntrada();
+  }
   if (n === "balaoModo") {
     const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.balaoPct.value);
     if (v && proposta) form.balaoPct.value = ev.target.value === "valor" ? +(v / 100 * proposta).toFixed(2) : +(v / proposta * 100).toFixed(4);

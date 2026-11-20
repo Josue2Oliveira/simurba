@@ -53,7 +53,13 @@
       <label>Valor de tabela (R$) <input type="number" step="0.01" name="valorTabela" /></label>
       <label>Valor da proposta (R$) <input type="number" step="0.01" name="valorProposta" /></label>
       <p class="dica">O cálculo usa só o valor da proposta. A tabela serve apenas para mostrar o desconto ao cliente.</p>
-      <label>Entrada (%) <span class="opc">sem a comissão</span> <input type="number" step="0.01" name="entradaPct" data-pct /></label>
+      <div class="modo-entrada">
+        <span>Entrada em:</span>
+        <label class="check"><input type="radio" name="entradaTotalModo" value="pct" /> % da proposta</label>
+        <label class="check"><input type="radio" name="entradaTotalModo" value="valor" /> R$</label>
+      </div>
+      <label><span id="rotEntrada">Entrada (%)</span> <span class="opc">sem a comissão</span> <input type="number" step="0.01" name="entradaPct" /></label>
+      <p class="dica" id="dicaEntrada"></p>
       <div class="dupla">
         <label>Comissão apartada (%) <input type="number" step="0.01" name="comissaoPct" data-pct /></label>
         <label>Qtd. parcelas da comissão <input type="number" min="1" name="qtdComissao" /></label>
