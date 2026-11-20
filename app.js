@@ -197,6 +197,8 @@ function render() {
     <div class="cab-meta">
       <div><small>Data da simulação</small><b>${dataSim}</b></div>
       ${p.nomeCliente ? `<div><small>Cliente</small><b>${esc(p.nomeCliente)}</b></div>` : ""}
+      ${p.nomeCorretor ? `<div><small>Corretor</small><b>${esc(p.nomeCorretor)}</b></div>` : ""}
+      ${p.nomeImobiliaria ? `<div><small>Imobiliária</small><b>${esc(p.nomeImobiliaria)}</b></div>` : ""}
     </div>`;
 
   const lim = e.jurosZeroAte;

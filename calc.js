@@ -47,7 +47,7 @@ export const DEFAULTS = {
   entradaGrupos: [{ qtd: 12, valor: 1350 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
   dataNascimento: "",              // "AAAA-MM-DD"
   // dados só de exibição / PDF
-  nomeCliente: "", quadra: "", lote: "", area: 0,
+  nomeCliente: "", nomeCorretor: "", nomeImobiliaria: "", quadra: "", lote: "", area: 0,
   pdfM2: false, pdfServico: true, pdfTotal: false, pdfIpca: false, ipcaAnual: 0.0441,
   prazo: 144,
   taxa: 0.0089,
