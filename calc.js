@@ -21,9 +21,10 @@ const ym = (d) => `${d.getMonth() + 1}/${d.getFullYear()}`;
 // Regras comerciais por empreendimento
 export const EMPREENDIMENTOS = {
   moinho: {
-    nome: "Recanto do Moinho", jurosZeroAte: 48,
+    nome: "Recanto do Moinho", jurosZeroAte: 60,
     faixasJuros: [[144, 0.0089], [180, 0.0092]],   // [prazo até, taxa a.m.] depois do juros zero
-    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false, balaoMaxPct: 0,
+    entradaMin: 0.10, atoMin: 0.01, intermMaxPct: 0.30, limiteQtdInterm: false,
+    balaoMaxPct: 0.40, // balão final: até 40% do valor da venda, sem correção até o juros zero
   },
   botanique: {
     nome: "Botanique Residence", jurosZeroAte: 60,
@@ -55,7 +56,7 @@ export const DEFAULTS = {
   intermModo: "valor",             // "valor" (R$) ou "pct" (% da proposta, por parcela)
   intermQtd: 0,
   balaoModo: "pct",                // "pct" (% da proposta) ou "valor" (R$) — só muda a forma de digitar
-  balaoPct: 0,                     // balão final (% da proposta) — só Botanique
+  balaoPct: 0,                     // balão final (% da proposta)
   intermValor: 0,
   intermPrimeiroVenc: "",          // "AAAA-MM-DD"
   intermPeriodicidade: "Anual",    // "Anual" | "Semestral"
@@ -65,7 +66,7 @@ export const DEFAULTS = {
 };
 
 // Política de juros por empreendimento (faixas em EMPREENDIMENTOS)
-// Moinho: zero até 48x · 0,89% até 144x · 0,92% até 180x
+// Moinho: zero até 60x · 0,89% até 144x · 0,92% até 180x
 // Botanique: zero até 60x · 0,85% até 120x · 0,92% até 180x
 export function taxaPolitica(prazo, empreendimento = "moinho") {
   const emp = EMPREENDIMENTOS[empreendimento] || EMPREENDIMENTOS.moinho;
@@ -89,8 +90,9 @@ export function simular(inp) {
   const nEntrada = grupos.reduce((s, g) => s + g.qtd, 0);               // B12
   const totalEntradaExSinal = grupos.reduce((s, g) => s + g.qtd * g.valor, 0); // B11
   const totalInterm = p.intermQtd * p.intermValor;                      // H24
-  // Balão final (modelo "intermediária"): sai do financiamento e é pago com a última parcela,
-  // corrigido pela taxa da intermediária (1 + taxa)^nº da parcela
+  // Balão final (modelo "intermediária"): sai do financiamento e é pago com a última parcela.
+  // Dentro do prazo de juros zero não tem correção; acima, corrigido pela taxa da intermediária
+  // (1 + taxa)^nº da parcela
   const empB = EMPREENDIMENTOS[p.empreendimento] || EMPREENDIMENTOS.moinho;
   const balao = empB.balaoMaxPct > 0 ? Math.max(0, p.balaoPct || 0) * p.valorProposta : 0;
   const financiamento = valorVenda - p.sinal - totalEntradaExSinal - totalInterm - balao; // H18
@@ -162,7 +164,8 @@ export function simular(inp) {
     const intermTaxa = tipo === "M" ? Math.pow(1 + p.intermTaxa, numero) * intermCRM : 0;
     const comissaoMes = comissao > 0 && numero <= qtdComissao ? comissaoParcela : 0;
     const balaoCRM = k === prazoTotal && tipo === "M" ? balao : 0;
-    const balaoTaxa = balaoCRM * Math.pow(1 + p.intermTaxa, numero);
+    // balão sem correção dentro do prazo de juros zero; acima, corrigido pela taxa da intermediária
+    const balaoTaxa = balaoCRM * (p.prazo <= empB.jurosZeroAte ? 1 : Math.pow(1 + p.intermTaxa, numero));
     const total = parcela + intermTaxa + comissaoMes + balaoTaxa;
     somaCorrigida += corrigida; somaTotal += total;
     linhas.push({ numero, tipo, venc, parcela, principal, juros, corrigida, intermCRM, intermTaxa, balaoCRM, balaoTaxa, comissaoMes, total });
@@ -177,6 +180,9 @@ export function simular(inp) {
     `A soma das intermediárias (${pct(totalInterm / valorVenda)}) ultrapassa ${pc(emp.intermMaxPct)} do valor da venda. Reduza a quantidade ou o valor.`);
   if (balao > 0) add(`Balão final até ${pc(emp.balaoMaxPct)} do valor da venda`, balao / p.valorProposta <= emp.balaoMaxPct + 1e-9,
     `O balão final (${pct(balao / p.valorProposta)}) ultrapassa ${pc(emp.balaoMaxPct)} do valor da venda.`);
+  if (balao > 0) add("Balão final dentro do financiamento (com a última parcela)",
+    linhas.at(-1).tipo === "M" && linhas.at(-1).balaoCRM === balao,
+    "O balão final deve ser pago junto com a última parcela do financiamento.");
   if (emp.limiteQtdInterm && p.intermQtd > 0 && p.prazo >= 72) {
     // plano longo (72x ou mais): no máximo 6 intermediárias; plano curto sem limite de quantidade
     add("No máximo 6 intermediárias (plano longo, 72x ou mais)", p.intermQtd <= 6,

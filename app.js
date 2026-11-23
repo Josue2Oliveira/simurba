@@ -54,8 +54,11 @@ function ler() {
   // sinal e faixas: se informados em %, convertem para R$ sobre o valor da proposta
   const conv = (v) => p.entradaModo === "pct" ? Math.round(v / 100 * p.valorProposta * 100) / 100 : v;
   p.sinal = conv(p.sinal);
-  p.entradaPct = p.entradaTotalModo === "valor" ? (p.valorProposta ? p.entradaPct / p.valorProposta : 0) : p.entradaPct / 100;
-  p.balaoPct = p.balaoModo === "valor" ? (p.valorProposta ? p.balaoPct / p.valorProposta : 0) : p.balaoPct / 100;
+  // entrada total e balão: lidos direto do campo, em R$ ou em % conforme o modo escolhido
+  const entradaBruta = parseFloat(form.entradaPct.value) || 0;
+  const balaoBruto = parseFloat(form.balaoPct.value) || 0;
+  p.entradaPct = p.entradaTotalModo === "valor" ? (p.valorProposta ? entradaBruta / p.valorProposta : 0) : entradaBruta / 100;
+  p.balaoPct = p.balaoModo === "valor" ? (p.valorProposta ? balaoBruto / p.valorProposta : 0) : balaoBruto / 100;
   if (p.intermModo === "pct") p.intermValor = Math.round(p.intermValor / 100 * p.valorProposta * 100) / 100;
   p.entradaGrupos = [0, 1, 2].map((i) => ({
     qtd: parseInt(form.querySelector(`[data-faixa="${i}"][data-campo="qtd"]`).value) || 0,
@@ -220,8 +223,11 @@ function render() {
     ? `${p.intermQtd}x de ${brl(p.intermValor)} (${fp(p.intermValor / prop)} cada) · total ${brl(r.totalInterm)} (${fp(r.totalInterm / prop)} da proposta)` : "";
   const podeBalao = e.balaoMaxPct > 0;
   $("campoBalao").style.display = podeBalao ? "" : "none";
+  const corrigeBalao = p.prazo > e.jurosZeroAte;
   $("dicaBalao").textContent = r.balao > 0
-    ? `${brl(r.balao)} pagos com a última parcela (${fmtData(s.linhas.at(-1).venc)}), corrigidos pela taxa da intermediária: ${brl(r.balaoFinal)}. Limite: ${fp(e.balaoMaxPct, 1)} do valor da venda.`
+    ? `${brl(r.balao)} pagos com a última parcela (${fmtData(s.linhas.at(-1).venc)}), ` +
+      (corrigeBalao ? `corrigidos pela taxa da intermediária: ${brl(r.balaoFinal)}` : `sem correção (prazo dentro do juros zero): ${brl(r.balaoFinal)}`) +
+      `. Limite: ${fp(e.balaoMaxPct, 1)} do valor da venda.`
     : `Opcional. Pago junto com a última parcela do financiamento, até ${fp(e.balaoMaxPct, 1)} do valor da venda.`;
   $("dicaIpca").textContent = `Equivale a ${fp(p.correcaoMensal, 3)} ao mês. Usado só na coluna de projeção.`;
 
