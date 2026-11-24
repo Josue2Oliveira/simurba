@@ -20,6 +20,19 @@ function desenharFaixas(grupos, emPct, proposta) {
 }
 const emPct = () => form.querySelector('[name="entradaModo"]:checked')?.value === "pct";
 
+// ---------- comissão apartada (até 3 faixas) ----------
+function desenharComissao(grupos, emPct, proposta) {
+  const el = $("comFaixas");
+  if (!el) return;
+  const mostra = (v) => !v ? "" : emPct ? +(v / proposta * 100).toFixed(4) : +(+v).toFixed(2);
+  el.innerHTML = grupos.map((g, i) => `
+    <div class="dupla">
+      <label>Faixa ${i + 1} · qtd <input type="number" min="0" data-com="${i}" data-campo="qtd" value="${g.qtd || ""}"></label>
+      <label>${emPct ? "% por parcela" : "valor (R$)"} <input type="number" step="0.01" data-com="${i}" data-campo="valor" value="${mostra(g.valor)}"></label>
+    </div>`).join("");
+}
+const comPct = () => form.querySelector('[name="comissaoModo"]:checked')?.value === "pct";
+
 // ---------- ler / escrever formulário ----------
 function preencher(p) {
   for (const el of form.elements) {
@@ -35,6 +48,7 @@ function preencher(p) {
   const pctMode = p.entradaModo === "pct";
   form.sinal.value = !p.sinal ? "" : pctMode ? +(p.sinal / p.valorProposta * 100).toFixed(4) : p.sinal;
   desenharFaixas(p.entradaGrupos, pctMode, p.valorProposta);
+  desenharComissao(p.comissaoGrupos || [], p.comissaoModo === "pct", p.valorProposta);
   form.intermValor.value = !p.intermValor ? (p.intermValor === 0 ? 0 : "") : p.intermModo === "pct" ? +(p.intermValor / p.valorProposta * 100).toFixed(4) : p.intermValor;
   form.entradaPct.value = !p.entradaPct ? 0 : p.entradaTotalModo === "valor" ? +(p.entradaPct * p.valorProposta).toFixed(2) : +(p.entradaPct * 100).toFixed(6);
   form.balaoPct.value = !p.balaoPct ? 0 : p.balaoModo === "valor" ? +(p.balaoPct * p.valorProposta).toFixed(2) : +(p.balaoPct * 100).toFixed(4);
@@ -64,6 +78,17 @@ function ler() {
     qtd: parseInt(form.querySelector(`[data-faixa="${i}"][data-campo="qtd"]`).value) || 0,
     valor: conv(parseFloat(form.querySelector(`[data-faixa="${i}"][data-campo="valor"]`).value) || 0),
   }));
+  // comissão apartada: até 3 faixas, em R$ ou % da proposta por parcela
+  const comMode = p.comissaoModo === "pct";
+  p.comissaoGrupos = [0, 1, 2].map((i) => {
+    const q = form.querySelector(`[data-com="${i}"][data-campo="qtd"]`);
+    const v = form.querySelector(`[data-com="${i}"][data-campo="valor"]`);
+    const val = parseFloat(v?.value) || 0;
+    return {
+      qtd: parseInt(q?.value) || 0,
+      valor: comMode ? Math.round(val / 100 * p.valorProposta * 100) / 100 : val,
+    };
+  });
   p.correcaoMensal = Math.pow(1 + (p.ipcaAnual || 0), 1 / 12) - 1;   // IPCA anual -> mensal
   return p;
 }
@@ -151,7 +176,7 @@ function cards(s, p, modoPdf) {
     : card("Valor da proposta", brl(r.valorProposta));
   h += card("Entrada total", brl(entrada), `${pct(entrada / r.valorProposta)} · ${mostrarServ ? `inclui ${nomeServ.toLowerCase()} de ${brl(r.comissao)}` : `sinal + ${r.nEntrada} parcelas`}`);
   h += card("Valor financiado", brl(r.financiamento));
-  if (mostrarServ) h += card(nomeServ, brl(r.comissao), `${r.qtdComissao}× de ${brl(r.comissaoParcela)}`);
+  if (mostrarServ) h += card(nomeServ, brl(r.comissao), r.comissaoFaixas.map((g) => `${g.qtd}× de ${brl(g.valor)}`).join(" + "));
   if (r.totalInterm > 0 || !modoPdf) h += card("Intermediárias", brl(r.totalInterm), pct(r.intermPct));
   if (r.balao > 0) h += card("Balão final", brl(r.balaoFinal), `${pct(r.balaoPct)} da venda (${brl(r.balao)}) · com a última parcela`);
   if (p.area > 0 && (!modoPdf || p.pdfM2)) {
@@ -252,10 +277,10 @@ function render() {
     ["Parcela: juros do período da entrada", r.pmtJuros],
     ["(=) Parcela mensal", r.parcelaMensal, "forte"],
   ];
-  if (r.comissao > 0) m.push([`Comissão apartada: ${r.qtdComissao}× de`, r.comissaoParcela, "forte"]);
+  const comDesc = r.comissaoFaixas.map((g, i) => `Faixa ${i + 1}: ${g.qtd}× de ${brl(g.valor)} (${fp(g.valor / prop)} cada)`).join(" · ");
   $("dicaComissao").textContent = (r.comissao > 0
-    ? `Comissão de ${brl(r.comissao)} em ${r.qtdComissao}× de ${brl(r.comissaoParcela)}, somada às primeiras ${r.qtdComissao} parcelas. No PDF aparece como "Intermediação". ` : "") +
-    `Entrada + comissão: ${fp(p.entradaPct + p.comissaoPct, 2)} (mínimo ${fp(e.entradaMin, 1)}).`;
+    ? `Comissão de ${brl(r.comissao)} (${fp(r.comissao / prop)} da proposta). ${comDesc}. No PDF aparece como "Intermediação". ` : "") +
+    `Entrada + comissão: ${fp((r.entradaInformada + r.comissao) / prop, 2)} (mínimo ${fp(e.entradaMin, 1)}).`;
   $("memoria").innerHTML = m.map(([t, v, c]) => `<tr class="${c || ""}"><td>${t}</td><td>${brl(v)}</td></tr>`).join("");
 
   // fluxo completo (tela)
@@ -299,6 +324,16 @@ function aplicarTaxa() {
   const t = taxaPolitica(parseInt(form.prazo.value) || 0, emp);
   if (t !== null) form.taxa.value = +(t * 100).toFixed(4);
 }
+// troca R$ <-> % da comissão, mantendo os valores
+function trocarModoComissao() {
+  const proposta = parseFloat(form.valorProposta.value) || 0;
+  const paraPct = comPct();
+  form.querySelectorAll('[data-com][data-campo="valor"]').forEach((el) => {
+    const v = parseFloat(el.value); if (!v || !proposta) return;
+    el.value = paraPct ? +(v / proposta * 100).toFixed(4) : +(v / 100 * proposta).toFixed(2);
+  });
+  desenharComissao(ler().comissaoGrupos, paraPct, proposta);
+}
 function rotulosEntrada() {
   const pc = emPct();
   $("rotSinal").textContent = pc ? "Sinal / ato (% da proposta)" : "Sinal / ato (R$)";
@@ -323,6 +358,7 @@ function trocarModoEntrada() {
 form.addEventListener("input", (ev) => {
   const n = ev.target.name;
   if (n === "entradaModo") trocarModoEntrada();
+  if (n === "comissaoModo") trocarModoComissao();
   if (n === "entradaTotalModo") {
     const proposta = parseFloat(form.valorProposta.value) || 0, v = parseFloat(form.entradaPct.value);
     if (v && proposta) form.entradaPct.value = ev.target.value === "valor" ? +(v / 100 * proposta).toFixed(2) : +(v / proposta * 100).toFixed(6);

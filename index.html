@@ -64,10 +64,13 @@
       </div>
       <label><span id="rotEntrada">Entrada (%)</span> <span class="opc">sem a comissão</span> <input type="number" step="0.01" name="entradaPct" /></label>
       <p class="dica" id="dicaEntrada"></p>
-      <div class="dupla">
-        <label>Comissão apartada (%) <input type="number" step="0.01" name="comissaoPct" data-pct /></label>
-        <label>Qtd. parcelas da comissão <input type="number" min="1" name="qtdComissao" /></label>
+      <p class="dica">Comissão apartada — divisão em até 3 faixas (a 1ª parcela é o sinal)</p>
+      <div class="modo-entrada">
+        <span>Informar em:</span>
+        <label class="check"><input type="radio" name="comissaoModo" value="valor" /> R$</label>
+        <label class="check"><input type="radio" name="comissaoModo" value="pct" /> % da proposta</label>
       </div>
+      <div id="comFaixas"></div>
       <p class="dica" id="dicaComissao"></p>
     </fieldset>
 

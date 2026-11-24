@@ -41,8 +41,8 @@ export const DEFAULTS = {
   valorProposta: 217000,
   entradaPct: 0.10,
   entradaTotalModo: "pct",         // "pct" (% da proposta) ou "valor" (R$) — só muda a forma de digitar
-  comissaoPct: 0,
-  qtdComissao: 1,
+  comissaoModo: "valor",          // "valor" (R$) ou "pct" (% da proposta, por parcela) — só muda a forma de digitar
+  comissaoGrupos: [{ qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }], // até 3 faixas, em R$
   entradaModo: "valor",            // "valor" (R$) ou "pct" (% da proposta) — só muda a forma de digitar
   sinal: 5500,
   entradaGrupos: [{ qtd: 12, valor: 1350 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }],
@@ -80,9 +80,16 @@ export function simular(inp) {
   const r = p.taxa;
 
   // Comissão apartada: sai da entrada e é paga à parte, em qtdComissao parcelas
-  const comissao = p.comissaoPct * p.valorProposta;                     // K9 (sobre a proposta)
-  const qtdComissao = Math.max(1, Math.round(p.qtdComissao || 1));
-  const comissaoParcela = comissao / qtdComissao;                       // BK9
+  // Comissão apartada em até 3 faixas: cada faixa = qtd de parcelas × valor, na ordem das parcelas (a partir do sinal)
+  const comGrupos = (p.comissaoGrupos || []).filter((g) => g.qtd > 0 && g.valor > 0);
+  const comissao = comGrupos.reduce((s, g) => s + g.qtd * g.valor, 0);   // K9
+  const qtdComissao = comGrupos.reduce((s, g) => s + g.qtd, 0);
+  const comissaoParcela = qtdComissao ? comissao / qtdComissao : 0;      // média, só para referência
+  const valorComissaoNumero = (numero) => {
+    let acc = 0;
+    for (const g of comGrupos) { acc += g.qtd; if (numero <= acc) return g.valor; }
+    return 0;
+  };
   const valorVenda = p.valorProposta - comissao;                        // H5 (venda CRM)
   const entradaPctLiq = p.entradaPct;                                   // entrada Urba (sem a comissão)
   const entradaTotalEsperada = entradaPctLiq * p.valorProposta;         // % sobre a proposta
@@ -162,7 +169,7 @@ export function simular(inp) {
     const intermCRM = interm.get(ym(venc)) || 0;
     if (intermCRM > 0) { if (tipo === "E") intermNaEntrada = true; else intermContadas++; }
     const intermTaxa = tipo === "M" ? Math.pow(1 + p.intermTaxa, numero) * intermCRM : 0;
-    const comissaoMes = comissao > 0 && numero <= qtdComissao ? comissaoParcela : 0;
+    const comissaoMes = valorComissaoNumero(numero);
     const balaoCRM = k === prazoTotal && tipo === "M" ? balao : 0;
     // balão sem correção dentro do prazo de juros zero; acima, corrigido pela taxa da intermediária
     const balaoTaxa = balaoCRM * (p.prazo <= empB.jurosZeroAte ? 1 : Math.pow(1 + p.intermTaxa, numero));
@@ -233,7 +240,7 @@ export function simular(inp) {
       valorVenda, entradaTotalEsperada, entradaInformada,
       valorTabela: p.valorTabela,
       valorProposta: p.valorProposta,
-      comissao, qtdComissao, comissaoParcela,
+      comissao, qtdComissao, comissaoParcela, comissaoFaixas: comGrupos,
       desconto: Math.max(0, p.valorTabela - p.valorProposta),
       descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - p.valorProposta) / p.valorTabela : 0,
       entradaEfetivaPct: entradaInformada / p.valorProposta,
