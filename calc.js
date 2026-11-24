@@ -41,6 +41,7 @@ export const DEFAULTS = {
   valorProposta: 217000,
   entradaPct: 0.10,
   entradaTotalModo: "pct",         // "pct" (% da proposta) ou "valor" (R$) — só muda a forma de digitar
+  comissaoPct: 0,                  // total da comissão apartada (% da proposta)
   comissaoModo: "valor",          // "valor" (R$) ou "pct" (% da proposta, por parcela) — só muda a forma de digitar
   comissaoGrupos: [{ qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }, { qtd: 0, valor: 0 }], // até 3 faixas, em R$
   entradaModo: "valor",            // "valor" (R$) ou "pct" (% da proposta) — só muda a forma de digitar
@@ -82,9 +83,10 @@ export function simular(inp) {
   // Comissão apartada: sai da entrada e é paga à parte, em qtdComissao parcelas
   // Comissão apartada em até 3 faixas: cada faixa = qtd de parcelas × valor, na ordem das parcelas (a partir do sinal)
   const comGrupos = (p.comissaoGrupos || []).filter((g) => g.qtd > 0 && g.valor > 0);
-  const comissao = comGrupos.reduce((s, g) => s + g.qtd * g.valor, 0);   // K9
+  const comissao = p.comissaoPct * p.valorProposta;                       // K9: total da comissão (% da proposta)
+  const somaFaixasCom = comGrupos.reduce((s, g) => s + g.qtd * g.valor, 0); // soma das parcelas informadas nas faixas
   const qtdComissao = comGrupos.reduce((s, g) => s + g.qtd, 0);
-  const comissaoParcela = qtdComissao ? comissao / qtdComissao : 0;      // média, só para referência
+  const comissaoParcela = qtdComissao ? somaFaixasCom / qtdComissao : 0; // média, só para referência
   const valorComissaoNumero = (numero) => {
     let acc = 0;
     for (const g of comGrupos) { acc += g.qtd; if (numero <= acc) return g.valor; }
@@ -207,6 +209,10 @@ export function simular(inp) {
   // ato Urba = só o sinal (o serviço/comissão não tem mínimo; quem define é o corretor)
   add(`Ato Urba mínimo de ${pc(emp.atoMin)}`, p.sinal / p.valorProposta >= emp.atoMin - 0.0001,
     `O ato Urba (sinal) está em ${brl(p.sinal)} (${pct(p.sinal / p.valorProposta)}); o mínimo é ${brl(p.valorProposta * emp.atoMin)} (${pc(emp.atoMin)}).`);
+  // comissão: o total (% da proposta) precisa ser todo distribuído nas faixas de parcelas
+  if (comissao > 0 || somaFaixasCom > 0) add(`Comissão apartada: as parcelas somam o total de ${pct(p.comissaoPct)}`,
+    Math.abs(somaFaixasCom - comissao) < 0.01,
+    `As parcelas da comissão somam ${brl(somaFaixasCom)}, mas o total da comissão é ${brl(comissao)} (${pct(p.comissaoPct)} da proposta). Ajuste as faixas.`);
   // entrada real = sinal + parcelas de entrada + comissão apartada
   const entradaReal = p.sinal + totalEntradaExSinal + comissao;
   add(`Entrada${comissao > 0 ? " + comissão" : ""}: mínimo de ${pc(emp.entradaMin)}`, entradaReal / p.valorProposta >= emp.entradaMin - 0.0001,
@@ -240,7 +246,7 @@ export function simular(inp) {
       valorVenda, entradaTotalEsperada, entradaInformada,
       valorTabela: p.valorTabela,
       valorProposta: p.valorProposta,
-      comissao, qtdComissao, comissaoParcela, comissaoFaixas: comGrupos,
+      comissao, comissaoSoma: somaFaixasCom, qtdComissao, comissaoParcela, comissaoFaixas: comGrupos,
       desconto: Math.max(0, p.valorTabela - p.valorProposta),
       descontoPct: p.valorTabela > 0 ? Math.max(0, p.valorTabela - p.valorProposta) / p.valorTabela : 0,
       entradaEfetivaPct: entradaInformada / p.valorProposta,

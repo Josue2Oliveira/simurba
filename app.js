@@ -279,7 +279,9 @@ function render() {
   ];
   const comDesc = r.comissaoFaixas.map((g, i) => `Faixa ${i + 1}: ${g.qtd}× de ${brl(g.valor)} (${fp(g.valor / prop)} cada)`).join(" · ");
   $("dicaComissao").textContent = (r.comissao > 0
-    ? `Comissão de ${brl(r.comissao)} (${fp(r.comissao / prop)} da proposta). ${comDesc}. No PDF aparece como "Intermediação". ` : "") +
+    ? `Total da comissão: ${brl(r.comissao)} (${fp(p.comissaoPct)} da proposta). Faixas somam ${brl(r.comissaoSoma)}` +
+      (Math.abs(r.comissao - r.comissaoSoma) < 0.01 ? " (confere). " : ` — ${r.comissao > r.comissaoSoma ? "faltam" : "sobram"} ${brl(Math.abs(r.comissao - r.comissaoSoma))}. `) +
+      `${comDesc}. No PDF aparece como "Intermediação". ` : "") +
     `Entrada + comissão: ${fp((r.entradaInformada + r.comissao) / prop, 2)} (mínimo ${fp(e.entradaMin, 1)}).`;
   $("memoria").innerHTML = m.map(([t, v, c]) => `<tr class="${c || ""}"><td>${t}</td><td>${brl(v)}</td></tr>`).join("");
 
